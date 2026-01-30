@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle } from 'lucide-react';
+import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle, User } from 'lucide-react';
 import FloatingHearts from '@/components/FloatingHearts';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState(''); // NEW: For profile storage
   const [loading, setLoading] = useState(false);
   
   // State to handle the "Check your mail" message
@@ -39,6 +40,11 @@ export default function AuthPage() {
         options: {
           // This ensures they come back to your live site after clicking the link
           emailRedirectTo: `${window.location.origin}/dashboard`,
+          // data: stores info in auth.users(raw_user_meta_data) 
+          // Your SQL trigger will use this to fill the public.profiles table
+          data: {
+            full_name: fullName,
+          }
         }
       });
 
@@ -59,7 +65,7 @@ export default function AuthPage() {
   // --- VIEW 1: THE "GO TO YOUR EMAIL" PROMPT ---
   if (isEmailSent) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
+      <main className="min-h-screen bg-linear-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
         <FloatingHearts />
         <div className="w-full max-w-md bg-white/90 backdrop-blur-xl rounded-[40px] shadow-2xl p-10 text-center relative z-10 border border-white animate-in zoom-in-95 duration-500">
           <div className="w-24 h-24 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
@@ -94,7 +100,7 @@ export default function AuthPage() {
 
   // --- VIEW 2: THE SIGN-IN / SIGN-UP FORM ---
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
+    <main className="min-h-screen bg-linear-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
       <FloatingHearts />
       
       <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[40px] shadow-2xl p-10 relative z-10 border border-white">
@@ -118,6 +124,24 @@ export default function AuthPage() {
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
+          
+          {/* FULL NAME FIELD (Only shows on Sign Up) */}
+          {!isLogin && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" required 
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-rose-400 transition-all font-medium" 
+                  placeholder="e.g. John Doe" 
+                  value={fullName} 
+                  onChange={(e) => setFullName(e.target.value)} 
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
             <div className="relative">
@@ -148,7 +172,7 @@ export default function AuthPage() {
 
           <button 
             disabled={loading} 
-            className="w-full bg-rose-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-rose-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
           >
             {loading ? 'Thinking...' : (isLogin ? 'Sign In' : 'Create My Account')}
             {!loading && <ArrowRight size={20} />}
