@@ -27,7 +27,7 @@ export default function FloatingHearts({ color }: { color?: string }) {
         <div
           key={heart.id}
           // Added || 'text-rose-400' as a safety fallback
-          className={`absolute bottom-[-100px] ${color || 'text-rose-400'} animate-float`}
+          className={`absolute bottom-25 ${color || 'text-rose-400'} animate-float`}
           style={{
             left: heart.left,
             animationDuration: heart.duration,
