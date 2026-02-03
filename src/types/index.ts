@@ -10,6 +10,7 @@ export interface ThemeConfig {
   card: string;
   envelope: string;
   stampColor: string;
+  heartColor: string;
 }
 
 export interface Wall {

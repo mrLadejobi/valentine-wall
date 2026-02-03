@@ -8,7 +8,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-rose-500 hover:bg-rose-600',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-rose-200 text-rose-700',
-    stampColor: 'text-rose-500'
+    stampColor: 'text-rose-500',
+    heartColor: 'text-rose-300'
   },
   'lavender': {
     bg: 'bg-violet-50',
@@ -17,7 +18,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-violet-500 hover:bg-violet-600',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-violet-200 text-violet-700',
-    stampColor: 'text-violet-500'
+    stampColor: 'text-violet-500',
+    heartColor: 'text-violet-300'
   },
   'warm-peach': {
     bg: 'bg-orange-50',
@@ -26,7 +28,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-orange-400 hover:bg-orange-500',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-orange-200 text-orange-700',
-    stampColor: 'text-orange-500'
+    stampColor: 'text-orange-500',
+    heartColor: 'text-orange-300'
   },
   'classic-red': {
     bg: 'bg-red-50',
@@ -35,7 +38,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-red-600 hover:bg-red-700',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-red-200 text-red-700',
-    stampColor: 'text-red-600'
+    stampColor: 'text-red-600',
+    heartColor: 'text-red-300'
   },
   'midnight-romance': {
     bg: 'bg-slate-900',
@@ -44,7 +48,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-pink-600 hover:bg-pink-700',
     card: 'bg-slate-800/90 backdrop-blur-md border border-slate-700',
     envelope: 'bg-slate-700 text-pink-300',
-    stampColor: 'text-pink-500'
+    stampColor: 'text-pink-500',
+    heartColor: 'text-pinnk-400/40'
   },
    'birthday-blue': {
     bg: 'bg-blue-50',
@@ -53,7 +58,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-blue-500 hover:bg-blue-600',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-blue-200 text-blue-700',
-    stampColor: 'text-blue-500'
+    stampColor: 'text-blue-500',
+    heartColor: 'text-blue-300'
   },
   'birthday-gold': {
     bg: 'bg-amber-50',
@@ -62,7 +68,8 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     accent: 'bg-amber-500 hover:bg-amber-600',
     card: 'bg-white/90 backdrop-blur-md',
     envelope: 'bg-yellow-200 text-amber-700',
-    stampColor: 'text-yellow-600'
+    stampColor: 'text-yellow-600',
+    heartColor: 'text-yelllow-300'
   }
 };
 

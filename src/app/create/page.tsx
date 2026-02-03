@@ -97,7 +97,7 @@ export default function CreateWallPage() {
   if (successSlug) {
     return (
       <main className={`min-h-screen ${THEMES[theme].bg} flex items-center justify-center p-6 relative overflow-hidden`}>
-        <FloatingHearts />
+        <FloatingHearts color={THEMES[theme].heartColor} />
         <div className="max-w-md w-full bg-white/90 backdrop-blur-xl rounded-[40px] p-8 shadow-2xl text-center relative z-10 border border-white">
           <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 size={48} />
@@ -127,7 +127,7 @@ export default function CreateWallPage() {
 
   return (
     <main className={`min-h-screen transition-all duration-500 ${THEMES[theme].bg} p-6 relative overflow-x-hidden pb-24`}>
-      <FloatingHearts />
+      <FloatingHearts color={THEMES[theme].heartColor} />
       <div className="max-w-md mx-auto relative z-10">
         <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 text-gray-500 mb-6"><ArrowLeft size={28} /></button>
         <div className="mb-8">

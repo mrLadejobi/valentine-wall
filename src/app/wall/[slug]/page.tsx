@@ -85,7 +85,7 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   if (videoID && !hasEntered) {
     return (
       <main className={`h-screen flex flex-col items-center justify-center bg-linear-to-br ${currentTheme.gradient} p-8 text-center`}>
-        <FloatingHearts />
+        <FloatingHearts color={currentTheme.heartColor}/>
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="z-10">
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-spin-slow">
              <Music className="text-rose-500" size={40} />
@@ -107,7 +107,7 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
 
   return (
     <div className={`min-h-screen transition-colors duration-700 bg-linear-to-br ${currentTheme.gradient} font-sans overflow-x-hidden`}>
-      <FloatingHearts />
+      <FloatingHearts color={currentTheme.heartColor} />
       <div className="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl bg-white/10 backdrop-blur-sm border-x border-white/20">
         {view === 'wall' ? (
           <>

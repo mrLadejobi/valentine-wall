@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 
-export default function FloatingHearts() {
+// Use a fallback of 'text-rose-400' if color is missing
+export default function FloatingHearts({ color }: { color?: string }) {
   const [hearts, setHearts] = useState<any[]>([]);
 
   useEffect(() => {
-    // Generate hearts only on the client side
     const generatedHearts = Array.from({ length: 15 }).map((_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
@@ -18,15 +18,16 @@ export default function FloatingHearts() {
     setHearts(generatedHearts);
   }, []);
 
-  // Return null or empty div during server-side rendering
-  if (hearts.length === 0) return <div className="fixed inset-0 pointer-events-none" />;
+  // Important: If hearts haven't generated yet, don't show anything
+  if (hearts.length === 0) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
       {hearts.map((heart) => (
         <div
           key={heart.id}
-          className="absolute -bottom-25 text-rose-400 animate-float"
+          // Added || 'text-rose-400' as a safety fallback
+          className={`absolute bottom-[-100px] ${color || 'text-rose-400'} animate-float`}
           style={{
             left: heart.left,
             animationDuration: heart.duration,
@@ -35,6 +36,7 @@ export default function FloatingHearts() {
             transform: `scale(${heart.scale})`,
           }}
         >
+          {/* Ensure fill-current is present so the color applies to the inside */}
           <Heart className="fill-current" size={24} />
         </div>
       ))}
