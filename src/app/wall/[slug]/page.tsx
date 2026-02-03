@@ -3,11 +3,14 @@ import React, { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { THEMES, STAMPS } from '@/lib/constants';
 import { Wall, Message, WallTheme, StampType, ThemeConfig } from '@/types';
-import { Mail, Lock, Send, Copy, Sparkles, ArrowLeft, X, Share2, Check, Music, CheckCircle2, Loader2 } from 'lucide-react';
+// Added AlertCircle to icons
+import { Mail, Lock, Send, Copy, Sparkles, ArrowLeft, X, Share2, Check, Music, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
+import filter from 'leo-profanity'; // Ensure you ran 'npm install leo-profanity'
+filter.add(['fuck', 'fucking', 'bastard', 'stupid', 'dumb', 'idiot', 'crazy', 'ode', 'oloriburuku', 'alainironu', 'pussy', 'breasts', 'bitch', 'fool', 'olosi'])
 
 export default function WallPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -182,15 +185,23 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
   const [hint, setHint] = useState('');
   const [stamp, setStamp] = useState<StampType>('heart');
   const [sending, setSending] = useState(false);
-  const [isSent, setIsSent] = useState(false); // FOR THE NUDGE
+  const [isSent, setIsSent] = useState(false); 
+  const [isInappropriate, setIsInappropriate] = useState(false); // NEW STATE
   const router = useRouter();
+
+  // REAL-TIME CENSORSHIP CHECK
+  useEffect(() => {
+    const isBad = filter.check(body) || filter.check(hint) || filter.check(author);
+    setIsInappropriate(isBad);
+  }, [body, hint, author]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isInappropriate) return; // Block submission
+
     setSending(true);
 
     try {
-      // TRACKING: Get IP Address
       const ipRes = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipRes.json();
 
@@ -201,7 +212,6 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
         hint,
         stamp,
         rotation: Math.random() * 10 - 5,
-        // Moderator tracking info
         ip_address: ipData.ip,
         user_agent: navigator.userAgent
       }]);
@@ -225,9 +235,8 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
         <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6 animate-bounce">
           <CheckCircle2 size={40} />
         </div>
-        <h2 className="text-3xl font-black text-gray-900 mb-2 leading-tight text-center">Letter Sealed!</h2>
+        <h2 className="text-3xl font-black text-gray-900 mb-2 leading-tight">Letter Sealed!</h2>
         <p className="text-gray-500 mb-10 font-medium">Your secret note has been delivered safely.</p>
-        
         <div className="w-full space-y-4">
           <motion.button 
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -236,9 +245,7 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
           >
             Create My Own Wall <Sparkles size={20} />
           </motion.button>
-          <button onClick={onSuccess} className="text-gray-400 font-bold hover:text-gray-600 transition-colors">
-            Back to mailbox
-          </button>
+          <button onClick={onSuccess} className="text-gray-400 font-bold hover:text-gray-600 transition-colors">Back to mailbox</button>
         </div>
       </motion.div>
     );
@@ -252,15 +259,25 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
       </div>
       
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border-t-8 border-rose-400 relative">
+        {/* TEXTAREA WITH DYNAMIC BORDER COLOR */}
+        <div className={`bg-white p-6 rounded-2xl shadow-sm border-t-8 transition-all duration-300 relative ${isInappropriate ? 'border-red-500 bg-red-50' : 'border-rose-400'}`}>
           <textarea
             required
-            maxLength={2000} // INCREASED LIMIT
+            maxLength={2000}
             placeholder="Write your secret message here..."
-            className="w-full h-64 border-none resize-none focus:ring-0 text-lg font-serif italic"
+            className="w-full h-64 border-none resize-none focus:ring-0 text-lg font-serif italic bg-transparent"
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
+          
+          <AnimatePresence>
+            {isInappropriate && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute top-2 right-4 flex items-center gap-1 text-red-600 font-black text-[10px] uppercase tracking-widest bg-white px-2 py-1 rounded-full shadow-sm border border-red-100">
+                <AlertCircle size={12} /> Unkind word detected
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="absolute bottom-4 right-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">
              {body.length} / 2000
           </div>
@@ -274,17 +291,19 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
             ))}
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <input placeholder="From (Optional)" className="w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium" value={author} onChange={(e)=>setAuthor(e.target.value)} />
-            <input required placeholder="Hint (Guess who?)" className="w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium" value={hint} onChange={(e)=>setHint(e.target.value)} />
+            <input placeholder="From (Optional)" className={`w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium ${isInappropriate ? 'focus:border-red-300' : 'focus:border-rose-300'}`} value={author} onChange={(e)=>setAuthor(e.target.value)} />
+            <input required placeholder="Hint (Guess who?)" className={`w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium ${isInappropriate ? 'focus:border-red-300' : 'focus:border-rose-300'}`} value={hint} onChange={(e)=>setHint(e.target.value)} />
           </div>
         </div>
 
+        {/* BUTTON DISABLES ON BAD WORDS */}
         <motion.button 
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          disabled={sending} 
-          className={`w-full py-5 rounded-2xl text-white font-black text-xl shadow-lg transition-all ${theme.accent} flex items-center justify-center gap-3`}
+          whileHover={!isInappropriate ? { scale: 1.02 } : {}} 
+          whileTap={!isInappropriate ? { scale: 0.98 } : {}}
+          disabled={sending || isInappropriate} 
+          className={`w-full py-5 rounded-2xl text-white font-black text-xl shadow-lg transition-all flex items-center justify-center gap-3 ${isInappropriate ? 'bg-gray-300 cursor-not-allowed shadow-none' : theme.accent}`}
         >
-          {sending ? <Loader2 className="animate-spin" /> : "Seal & Send Letter"}
+          {isInappropriate ? "Please be kind ❤️" : sending ? <Loader2 className="animate-spin" /> : "Seal & Send Letter"}
         </motion.button>
       </form>
     </motion.div>
