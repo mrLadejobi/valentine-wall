@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (error) throw error;
     if (!walls || walls.length === 0) return NextResponse.json({ message: 'No walls found' });
 
-    const zapierUrl = "https://hooks.zapier.com/hooks/catch/26316530/ulctexv/";
+    const makeUrl = "https://hook.eu1.make.com/ex1r82vnehazfg1cglbmahrdtvug24es";
     
     // 3. Send to Zapier
     const notifications = walls.map(async (wall: any) => {
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         return null;
       }
 
-      return fetch(zapierUrl, {
+      return fetch(makeUrl, {
         method: 'POST',
         // ADDED HEADERS: This is why Zapier likely saw an empty "To" field
         headers: {
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
           email: wall.profiles.email, // This maps to the orange bubble in Zapier
           name: wall.profiles.full_name || 'Celebrant',
           wallName: wall.name,
-          dashboardUrl: "https://mode-valentine-wall.vercel.app/dashboard"
+          dashboardUrl: "https://thelovewall.vercel.app/dashboard"
         })
       });
     });
