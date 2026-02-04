@@ -4,20 +4,20 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { THEMES, DEFAULT_VIBES } from '@/lib/constants';
 import { WallTheme, WallType } from '@/types';
-import { ArrowLeft, Heart, CheckCircle2, Copy, Share2, Sparkles, ExternalLink, LayoutDashboard, Music } from 'lucide-react';
+import { ArrowLeft, Heart, CheckCircle2, Copy, Share2, Sparkles, ExternalLink, LayoutDashboard, Music, Calendar } from 'lucide-react';
 import FloatingHearts from '@/components/FloatingHearts';
 import confetti from 'canvas-confetti';
 
 export default function CreateWallPage() {
   const [name, setName] = useState('');
   const [type, setType] = useState<WallType>('valentine');
-  const [unlockDate, setUnlockDate] = useState('2026-02-14');
+  const [unlockDate, setUnlockDate] = useState('2025-02-14'); // Changed default to 2025
   const [theme, setTheme] = useState<WallTheme>('soft-pink');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [musicUrl, setMusicUrl] = useState('');
   
-  // New States for Preview
+  // Success States
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [successSlug, setSuccessSlug] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -36,7 +36,6 @@ export default function CreateWallPage() {
     checkUser();
   }, [router]);
 
-  // Helper to extract YouTube ID
   const getID = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
@@ -70,6 +69,18 @@ export default function CreateWallPage() {
     }
   };
 
+  // ADDED: Calendar Reminder Logic
+  const handleAddToCalendar = () => {
+    const title = `❤️ Open My ${type === 'valentine' ? 'Valentine' : 'Birthday'} Wall!`;
+    const details = `Your secret envelopes are now unlocked! Check them here: ${window.location.origin}/dashboard`;
+    
+    // Format: YYYYMMDD for Google Calendar
+    const dateStr = type === 'valentine' ? '20250214' : unlockDate.replace(/-/g, '');
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T090000Z/${dateStr}T100000Z&details=${encodeURIComponent(details)}`;
+    
+    window.open(googleUrl, '_blank');
+  };
+
   const handleCopyLink = () => {
     const url = `${window.location.origin}/wall/${successSlug}`;
     navigator.clipboard.writeText(url);
@@ -83,7 +94,7 @@ export default function CreateWallPage() {
       try {
         await navigator.share({
           title: `${name}'s Wall`,
-          text: `Leave me a secret message! Locked until ${new Date(unlockDate).toLocaleDateString()}.`,
+          text: `Leave me a secret message! It stays locked until ${new Date(unlockDate).toLocaleDateString()}.`,
           url: url,
         });
       } catch (err) { console.log(err); }
@@ -92,7 +103,7 @@ export default function CreateWallPage() {
     }
   };
 
-  if (!user) return <div className="h-screen flex items-center justify-center font-bold text-rose-500">Checking credentials...</div>;
+  if (!user) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse">Checking credentials...</div>;
 
   if (successSlug) {
     return (
@@ -103,15 +114,27 @@ export default function CreateWallPage() {
             <CheckCircle2 size={48} />
           </div>
           <h2 className="text-3xl font-black text-gray-900 mb-2">Wall Created!</h2>
-          <div className="bg-gray-50 rounded-2xl p-4 mb-8 border border-gray-100 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-400 truncate mr-4">{window.location.origin}/wall/{successSlug}</span>
+          <p className="text-gray-500 mb-6 text-sm">Share your link to start collecting secret notes.</p>
+          
+          <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-400 truncate mr-4">{window.location.origin}/wall/{successSlug}</span>
             <button onClick={handleCopyLink} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">{copied ? <Sparkles size={20} /> : <Copy size={20} />}</button>
           </div>
+
           <div className="space-y-3">
             <button onClick={handleNativeShare} className="w-full bg-rose-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-2">
               <Share2 size={20} /> Share Wall Link
             </button>
-            <div className="grid grid-cols-2 gap-3">
+            
+            {/* NEW: Calendar Button */}
+            <button 
+              onClick={handleAddToCalendar}
+              className="w-full bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-sm border border-rose-100 flex items-center justify-center gap-2 hover:bg-rose-100 transition-all"
+            >
+              <Calendar size={18} /> Remind me on the Big Day
+            </button>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
               <button onClick={() => router.push(`/wall/${successSlug}`)} className="bg-gray-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
                 <ExternalLink size={18} /> View Wall
               </button>
@@ -131,8 +154,8 @@ export default function CreateWallPage() {
       <div className="max-w-md mx-auto relative z-10">
         <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 text-gray-500 mb-6"><ArrowLeft size={28} /></button>
         <div className="mb-8">
-          <h2 className="text-4xl font-black text-gray-900 mb-2">Design your wall</h2>
-          <p className="text-gray-500 font-medium">Welcome, {user.email?.split('@')[0]}! Let's build your vibe.</p>
+          <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">Design your wall</h2>
+          <p className="text-gray-500 font-medium tracking-tight">Welcome, {user.email?.split('@')[0]}! Let's build your vibe.</p>
         </div>
         
         <form onSubmit={handleCreate} className="space-y-8">
@@ -144,7 +167,7 @@ export default function CreateWallPage() {
           <div className="space-y-3">
              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">What's the occasion?</label>
              <div className="flex bg-gray-200/50 backdrop-blur-sm p-1 rounded-2xl">
-                <button type="button" onClick={() => {setType('valentine'); setUnlockDate('2026-02-14');}} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'valentine' ? 'bg-white shadow-sm text-rose-500' : 'text-gray-500'}`}>Valentine</button>
+                <button type="button" onClick={() => {setType('valentine'); setUnlockDate('2025-02-14');}} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'valentine' ? 'bg-white shadow-sm text-rose-500' : 'text-gray-500'}`}>Valentine</button>
                 <button type="button" onClick={() => setType('birthday')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'birthday' ? 'bg-white shadow-sm text-blue-500' : 'text-gray-500'}`}>Birthday</button>
               </div>
           </div>
@@ -187,7 +210,6 @@ export default function CreateWallPage() {
         </form>
       </div>
 
-      {/* Hidden Preview Player Overlay */}
       {isPreviewing && getID(musicUrl) && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-rose-100 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-10">
           <div className="w-3 h-3 bg-rose-500 rounded-full animate-pulse" />

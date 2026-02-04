@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Wall, Message, StampType, Profile } from '@/types'; // Added Profile to types
+import { Wall, Message, StampType, Profile } from '@/types';
 import { STAMPS } from '@/lib/constants';
 import Link from 'next/link';
 import { 
@@ -9,16 +9,16 @@ import {
   Copy, Check, Calendar, Heart, MessageCircle, 
   Sparkles, Share2, Zap, User
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion'; // For interactivity
 import FloatingHearts from '@/components/FloatingHearts';
 
-// Extend the Wall type locally
 interface DashboardWall extends Wall {
   messages: Pick<Message, 'id' | 'stamp' | 'hint' | 'created_at'>[];
 }
 
 export default function Dashboard() {
   const [walls, setWalls] = useState<DashboardWall[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null); // NEW: Store profile data
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -27,7 +27,6 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // 1. Fetch User Profile (from the public.profiles table we created)
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -36,7 +35,6 @@ export default function Dashboard() {
         
         if (profileData) setProfile(profileData);
 
-        // 2. Fetch walls AND the latest 3 messages for each
         const { data: wallsData } = await supabase
           .from('walls')
           .select('*, messages(id, stamp, hint, created_at)')
@@ -57,7 +55,6 @@ export default function Dashboard() {
 
     fetchDashboardData();
 
-    // Listen for new messages globally
     const channel = supabase
       .channel('dashboard-updates')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
@@ -100,123 +97,136 @@ export default function Dashboard() {
     window.location.href = '/';
   };
 
+  // ADDED: Calendar Logic for Dashboard
+  const handleReminder = (wall: DashboardWall) => {
+    const title = `❤️ Open My ${wall.type === 'valentine' ? 'Valentine' : 'Birthday'} Wall!`;
+    const details = `Your secret envelopes are now unlocked! Check them here: ${window.location.origin}/wall/${wall.slug}`;
+    const dateStr = wall.type === 'valentine' ? '20250214' : wall.unlock_date.split('T')[0].replace(/-/g, '');
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T090000Z/${dateStr}T100000Z&details=${encodeURIComponent(details)}`;
+    window.open(googleUrl, '_blank');
+  };
+
   if (loading) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse text-xl">Loading your space...</div>;
 
   return (
-    <main className="min-h-screen bg-gray-50/50 p-6 relative overflow-x-hidden">
-      <FloatingHearts />
+    <main className="min-h-screen bg-gray-50/50 p-6 relative overflow-x-hidden pb-20">
+      <FloatingHearts color="text-rose-200" />
       
-      <div className="max-w-4xl mx-auto relative z-10 pb-20">
+      <div className="max-w-4xl mx-auto relative z-10">
         <header className="flex justify-between items-center mb-10">
           <div className="animate-in slide-in-from-left duration-700">
-            {/* NEW: Personalized Greeting */}
             <div className="flex items-center gap-2 mb-1">
                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Session</span>
+               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Live Session</span>
             </div>
             <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-none">
               Hi, {profile?.full_name?.split(' ')[0] || 'Celebrant'}! ✨
             </h1>
             <p className="text-gray-500 font-medium mt-2 flex items-center gap-2">
               <MessageCircle size={16} className="text-rose-400" /> 
-              {walls.reduce((acc, w) => acc + w.messages.length, 0)} secret notes collected
+              {walls.reduce((acc, w) => acc + w.messages.length, 0)} notes total
             </p>
           </div>
           
           <div className="flex gap-2">
-             <div className="hidden sm:flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm">
-                <div className="w-8 h-8 bg-rose-100 rounded-full flex items-center justify-center text-rose-500">
-                   <User size={16} />
-                </div>
-                <span className="text-xs font-bold text-gray-600">{profile?.email}</span>
-             </div>
-             <button onClick={handleLogout} className="p-3 text-gray-400 hover:text-rose-500 transition-colors bg-white rounded-2xl shadow-sm border border-gray-100">
+             <motion.button 
+               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+               onClick={handleLogout} 
+               className="p-3 text-gray-400 hover:text-rose-500 transition-colors bg-white rounded-2xl shadow-sm border border-gray-100"
+             >
                <LogOut size={20} />
-             </button>
+             </motion.button>
           </div>
         </header>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Create New Wall CTA */}
-          <Link href="/create" className="group border-3 border-dashed border-rose-200 rounded-4xl p-8 flex flex-col items-center justify-center gap-4 hover:border-rose-400 hover:bg-white transition-all min-h-70 bg-rose-50/20">
-            <div className="w-16 h-16 bg-white text-rose-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm ring-4 ring-rose-50">
-              <Plus size={32} strokeWidth={3} />
-            </div>
-            <div className="text-center">
-              <span className="block font-bold text-rose-600 text-lg">Create New Wall</span>
-              <span className="text-xs text-rose-400 font-medium">Valentines or Birthdays</span>
-            </div>
-          </Link>
-
-          {/* Existing Walls */}
-          {walls.map((wall) => (
-            <div key={wall.id} className="bg-white rounded-4xl p-8 shadow-sm border border-gray-100 flex flex-col group hover:shadow-2xl hover:shadow-rose-500/10 transition-all relative overflow-hidden">
-              <div className="flex justify-between items-start mb-6">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${wall.type === 'valentine' ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'}`}>
-                  {wall.type === 'valentine' ? <Heart size={28} className="fill-current" /> : <Calendar size={28} />}
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleShare(wall.slug, wall.type)} className="p-2.5 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-rose-500 transition-colors" title="Share">
-                    <Share2 size={18} />
-                  </button>
-                  <button onClick={() => handleDelete(wall.id)} className="p-2.5 hover:bg-rose-50 rounded-xl text-gray-400 hover:text-rose-500 transition-colors" title="Delete">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+          {/* CREATE NEW WALL BUTTON */}
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Link href="/create" className="group border-3 border-dashed border-rose-200 rounded-4xl p-8 flex flex-col items-center justify-center gap-4 hover:border-rose-400 hover:bg-white transition-all min-h-70 bg-rose-50/20 h-full">
+              <div className="w-16 h-16 bg-white text-rose-500 rounded-2xl flex items-center justify-center shadow-sm ring-4 ring-rose-50">
+                <Plus size={32} strokeWidth={3} />
               </div>
-              
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-1 leading-tight">{wall.name}</h3>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${wall.type === 'valentine' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {wall.type}
-                  </span>
-                  <span className="text-xs font-bold text-gray-400 tracking-wide">
-                    Unlocks {new Date(wall.unlock_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
-                  </span>
-                </div>
+              <div className="text-center">
+                <span className="block font-bold text-rose-600 text-lg">Create New Wall</span>
+                <span className="text-xs text-rose-400 font-medium tracking-tight">Valentines or Birthdays</span>
               </div>
+            </Link>
+          </motion.div>
 
-              {/* Activity Feed */}
-              <div className={`rounded-3xl p-4 mb-6 border ${wall.type === 'valentine' ? 'bg-rose-50/50 border-rose-100' : 'bg-blue-50/50 border-blue-100'}`}>
-                <p className={`text-[10px] font-black uppercase mb-3 flex items-center gap-2 ${wall.type === 'valentine' ? 'text-rose-400' : 'text-blue-400'}`}>
-                  <Zap size={12} fill="currentColor" /> Recent Activity
-                </p>
-                {wall.messages.length > 0 ? (
-                  <div className="space-y-3">
-                    {wall.messages.map((m) => (
-                      <div key={m.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2">
-                        <span className="text-xl bg-white p-1 rounded-lg shadow-sm border border-black/5">
-                          {STAMPS[m.stamp as StampType]?.icon || '💌'}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-700 truncate">Hint: "{m.hint}"</p>
-                          <p className="text-[9px] text-gray-400">{new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                        </div>
-                      </div>
-                    ))}
+          {/* LIST OF WALLS */}
+          <AnimatePresence>
+            {walls.map((wall) => (
+              <motion.div 
+                layout key={wall.id}
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-4xl p-8 shadow-sm border border-gray-100 flex flex-col group hover:shadow-2xl hover:shadow-rose-500/10 transition-all relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${wall.type === 'valentine' ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'}`}>
+                    {wall.type === 'valentine' ? <Heart size={28} className="fill-current" /> : <Calendar size={28} />}
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-400 italic py-2">No messages yet. Share your link!</p>
-                )}
-              </div>
-              
-              <div className="mt-auto pt-6 border-t border-gray-50 flex justify-between items-center">
-                <Link href={`/wall/${wall.slug}`} className="flex items-center gap-2 text-sm font-bold text-gray-900 hover:text-rose-500 transition-colors group/link">
-                  <Layout size={16} /> 
-                  Open Wall 
-                  <Sparkles size={14} className="opacity-0 group-hover/link:opacity-100 text-amber-500 transition-opacity" />
-                </Link>
-                <button 
-                  onClick={() => handleCopy(wall.slug, wall.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all active:scale-95"
-                >
-                  {copiedId === wall.id ? <Check size={14} /> : <Copy size={14} />}
-                  {copiedId === wall.id ? 'Copied' : 'Copy Link'}
-                </button>
-              </div>
-            </div>
-          ))}
+                  <div className="flex gap-1">
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleShare(wall.slug, wall.type)} className="p-2.5 hover:bg-gray-50 rounded-xl text-gray-400 hover:text-rose-500 transition-colors"><Share2 size={18} /></motion.button>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDelete(wall.id)} className="p-2.5 hover:bg-rose-50 rounded-xl text-gray-400 hover:text-rose-500 transition-colors"><Trash2 size={18} /></motion.button>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1 leading-tight">{wall.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${wall.type === 'valentine' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
+                      {wall.type}
+                    </span>
+                    {/* ADDED: Remind Me Button */}
+                    <motion.button 
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => handleReminder(wall)}
+                      className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-rose-500 transition-colors uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-md"
+                    >
+                      <Calendar size={10} /> Set Reminder
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Activity Feed Section */}
+                <div className={`rounded-3xl p-4 mb-6 border ${wall.type === 'valentine' ? 'bg-rose-50/50 border-rose-100' : 'bg-blue-50/50 border-blue-100'}`}>
+                  <p className={`text-[10px] font-black uppercase mb-3 flex items-center gap-2 ${wall.type === 'valentine' ? 'text-rose-400' : 'text-blue-400'}`}>
+                    <Zap size={12} fill="currentColor" /> Recent Activity
+                  </p>
+                  {wall.messages.length > 0 ? (
+                    <div className="space-y-3">
+                      {wall.messages.map((m) => (
+                        <div key={m.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2">
+                          <span className="text-xl bg-white p-1 rounded-lg shadow-sm border border-black/5">{STAMPS[m.stamp as StampType]?.icon || '💌'}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-gray-700 truncate italic">"{m.hint}"</p>
+                            <p className="text-[9px] text-gray-400">{new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic py-2">No messages yet. Share your link!</p>
+                  )}
+                </div>
+                
+                <div className="mt-auto pt-6 border-t border-gray-50 flex justify-between items-center">
+                  <Link href={`/wall/${wall.slug}`} className="flex items-center gap-2 text-sm font-bold text-gray-900 hover:text-rose-500 transition-colors group/link">
+                    <Layout size={16} /> 
+                    Open Wall 
+                  </Link>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => handleCopy(wall.slug, wall.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
+                  >
+                    {copiedId === wall.id ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                    {copiedId === wall.id ? 'Copied' : 'Copy Link'}
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
     </main>
