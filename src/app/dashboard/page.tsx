@@ -9,7 +9,7 @@ import {
   Copy, Check, Calendar, Heart, MessageCircle, 
   Sparkles, Share2, Zap, User
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion'; // For interactivity
+import { motion, AnimatePresence } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 
 interface DashboardWall extends Wall {
@@ -21,12 +21,14 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [totalNotes, setTotalNotes] = useState(0); // This holds the accurate count
 
   useEffect(() => {
     async function fetchDashboardData() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // 1. Fetch User Profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -35,20 +37,30 @@ export default function Dashboard() {
         
         if (profileData) setProfile(profileData);
 
+        // 2. Fetch walls AND ALL messages associated with them
         const { data: wallsData } = await supabase
           .from('walls')
           .select('*, messages(id, stamp, hint, created_at)')
           .eq('owner_id', user.id)
           .order('created_at', { ascending: false });
         
-        const sortedWalls = (wallsData || []).map(wall => ({
-          ...wall,
-          messages: (wall.messages || []).sort((a: any, b: any) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          ).slice(0, 3)
-        }));
+        if (wallsData) {
+          // --- THE FIX: Calculate total notes before we slice the array ---
+          const actualTotal = wallsData.reduce((acc, wall) => acc + (wall.messages?.length || 0), 0);
+          setTotalNotes(actualTotal);
 
-        setWalls(sortedWalls);
+          // 3. Create the sorted/sliced version specifically for the Activity Feed UI
+          const sortedWalls = wallsData.map(wall => ({
+            ...wall,
+            messages: (wall.messages || [])
+              .sort((a: any, b: any) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              )
+              .slice(0, 3) // Only show the last 3 in the dashboard card
+          }));
+
+          setWalls(sortedWalls);
+        }
       }
       setLoading(false);
     }
@@ -97,11 +109,10 @@ export default function Dashboard() {
     window.location.href = '/';
   };
 
-  // ADDED: Calendar Logic for Dashboard
   const handleReminder = (wall: DashboardWall) => {
     const title = `❤️ Open My ${wall.type === 'valentine' ? 'Valentine' : 'Birthday'} Wall!`;
     const details = `Your secret envelopes are now unlocked! Check them here: ${window.location.origin}/wall/${wall.slug}`;
-    const dateStr = wall.type === 'valentine' ? '20250214' : wall.unlock_date.split('T')[0].replace(/-/g, '');
+    const dateStr = wall.type === 'valentine' ? '20260214' : wall.unlock_date.split('T')[0].replace(/-/g, '');
     const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T090000Z/${dateStr}T100000Z&details=${encodeURIComponent(details)}`;
     window.open(googleUrl, '_blank');
   };
@@ -124,7 +135,7 @@ export default function Dashboard() {
             </h1>
             <p className="text-gray-500 font-medium mt-2 flex items-center gap-2">
               <MessageCircle size={16} className="text-rose-400" /> 
-              {walls.reduce((acc, w) => acc + w.messages.length, 0)} notes total
+              {totalNotes} notes total
             </p>
           </div>
           
@@ -140,7 +151,6 @@ export default function Dashboard() {
         </header>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* CREATE NEW WALL BUTTON */}
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link href="/create" className="group border-3 border-dashed border-rose-200 rounded-4xl p-8 flex flex-col items-center justify-center gap-4 hover:border-rose-400 hover:bg-white transition-all min-h-70 bg-rose-50/20 h-full">
               <div className="w-16 h-16 bg-white text-rose-500 rounded-2xl flex items-center justify-center shadow-sm ring-4 ring-rose-50">
@@ -153,7 +163,6 @@ export default function Dashboard() {
             </Link>
           </motion.div>
 
-          {/* LIST OF WALLS */}
           <AnimatePresence>
             {walls.map((wall) => (
               <motion.div 
@@ -177,7 +186,6 @@ export default function Dashboard() {
                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${wall.type === 'valentine' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'}`}>
                       {wall.type}
                     </span>
-                    {/* ADDED: Remind Me Button */}
                     <motion.button 
                       whileHover={{ scale: 1.05 }}
                       onClick={() => handleReminder(wall)}
@@ -188,7 +196,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Activity Feed Section */}
                 <div className={`rounded-3xl p-4 mb-6 border ${wall.type === 'valentine' ? 'bg-rose-50/50 border-rose-100' : 'bg-blue-50/50 border-blue-100'}`}>
                   <p className={`text-[10px] font-black uppercase mb-3 flex items-center gap-2 ${wall.type === 'valentine' ? 'text-rose-400' : 'text-blue-400'}`}>
                     <Zap size={12} fill="currentColor" /> Recent Activity
