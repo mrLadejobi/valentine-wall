@@ -65,7 +65,7 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   }, [wall]);
 
   const currentTheme = wall ? THEMES[wall.theme as WallTheme] : THEMES['soft-pink'];
-  const canOpen = isUnlocked;
+  const canOpen = isUnlocked; 
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
