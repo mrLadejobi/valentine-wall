@@ -10,6 +10,8 @@ import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import filter from 'leo-profanity';
 
+
+//production deploy 2026
 // CENSORSHIP CONFIG
 filter.add(['fuck', 'fucking', 'bastard', 'stupid', 'dumb', 'idiot', 'crazy', 'ode', 'oloriburuku', 'alainironu', 'pussy', 'breasts', 'bitch', 'fool', 'olosi']);
 
