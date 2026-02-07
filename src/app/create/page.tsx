@@ -15,11 +15,13 @@ export default function CreateWallPage() {
   const [theme, setTheme] = useState<WallTheme>('soft-pink');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  // Music States
   const [musicUrl, setMusicUrl] = useState('');
   const [isPreviewing, setIsPreviewing] = useState(false);
+
   const [successSlug, setSuccessSlug] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
   const router = useRouter();
 
   useEffect(() => {
@@ -88,34 +90,84 @@ export default function CreateWallPage() {
       <FloatingHearts color={THEMES[theme].heartColor} />
       <div className="max-w-md mx-auto relative z-10">
         <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 text-gray-500 mb-6"><ArrowLeft size={28} /></button>
-        <h2 className="text-4xl font-black text-gray-900 mb-8 tracking-tight">Design your wall</h2>
+        <h2 className="text-4xl font-black text-gray-900 mb-8 tracking-tight leading-tight">Design your wall</h2>
+        
         <form onSubmit={handleCreate} className="space-y-8">
-          <input required className="w-full p-5 bg-white/70 backdrop-blur-md rounded-2xl border-2 border-transparent focus:border-rose-400 outline-none text-lg font-medium" value={name} onChange={(e) => setName(e.target.value)} placeholder="Display Name" />
-          <div className="flex bg-gray-100 p-1 rounded-2xl">
-             <button type="button" onClick={() => {setType('valentine'); setUnlockDate('2026-02-14');}} className={`flex-1 py-3 rounded-xl font-bold ${type === 'valentine' ? 'bg-white text-rose-500 shadow-sm' : 'text-gray-500'}`}>Valentine</button>
-             <button type="button" onClick={() => setType('birthday')} className={`flex-1 py-3 rounded-xl font-bold ${type === 'birthday' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-500'}`}>Birthday</button>
+          {/* Name Input */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Wall Display Name</label>
+            <input required maxLength={20} className={`w-full p-5 bg-white/70 backdrop-blur-md rounded-2xl border-2 border-transparent outline-none text-lg font-medium transition-all ${type === 'valentine' ? 'focus:border-rose-400' : 'focus:border-blue-400'}`} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My Secret Collection" />
           </div>
-          {type === 'birthday' && <input type="date" required className="w-full p-4 bg-white/70 rounded-2xl border-none outline-none focus:ring-2 focus:ring-blue-400" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />}
-          <div className="grid grid-cols-2 gap-2">
-            {(DEFAULT_VIBES as any[]).map((vibe) => (
-              <button key={vibe.url} type="button" onClick={() => { setMusicUrl(vibe.url); setIsPreviewing(true); }} className={`text-xs p-3 rounded-xl border-2 font-bold ${musicUrl === vibe.url ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-gray-100 bg-white/30 text-gray-400'}`}>{vibe.label}</button>
-            ))}
+
+          {/* Occasion */}
+          <div className="space-y-2">
+             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Occasion</label>
+             <div className="flex bg-gray-100 p-1 rounded-2xl">
+                <button type="button" onClick={() => {setType('valentine'); setUnlockDate('2026-02-14');}} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'valentine' ? 'bg-white text-rose-500 shadow-sm' : 'text-gray-500'}`}>Valentine</button>
+                <button type="button" onClick={() => setType('birthday')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'birthday' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-500'}`}>Birthday</button>
+              </div>
           </div>
-          <div className="grid gap-3">
-            {(Object.keys(THEMES) as WallTheme[]).map((t) => (
-              <button key={t} type="button" onClick={() => setTheme(t)} className={`p-4 rounded-2xl border-2 flex items-center justify-between ${theme === t ? 'border-rose-500 bg-white shadow-md' : 'border-white/50 bg-white/30'}`}>
-                <span className="capitalize font-bold">{t.replace('-', ' ')}</span>
-                {theme === t && <CheckCircle2 className="text-rose-500" size={20} />}
-              </button>
-            ))}
+
+          {type === 'birthday' && (
+            <div className="animate-in slide-in-from-top-4 duration-300">
+               <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Birthday Date</label>
+               <input type="date" required className="w-full p-4 bg-white/70 rounded-2xl border-none outline-none focus:ring-2 focus:ring-blue-400 font-medium" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />
+            </div>
+          )}
+
+          {/* BRINGING BACK THE MUSIC URL SPACE */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+              <Music size={14} /> Set the Vibe (Music)
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {(DEFAULT_VIBES as any[]).map((vibe) => (
+                <button key={vibe.url} type="button" onClick={() => { setMusicUrl(vibe.url); setIsPreviewing(true); }} className={`text-xs p-3 rounded-xl border-2 font-bold transition-all ${musicUrl === vibe.url ? (type === 'valentine' ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-blue-500 bg-blue-50 text-blue-600') : 'border-gray-100 bg-white/30 text-gray-400'}`}>{vibe.label}</button>
+              ))}
+            </div>
+            
+            {/* The Custom Link Space */}
+            <div className="relative group">
+               <input 
+                 placeholder="Paste a YouTube Link for a song here..." 
+                 className={`w-full p-4 bg-white/70 backdrop-blur-md rounded-2xl border-2 border-transparent outline-none transition-all text-sm font-medium ${type === 'valentine' ? 'focus:border-rose-400' : 'focus:border-blue-400'}`} 
+                 value={musicUrl} 
+                 onChange={(e) => {
+                    setMusicUrl(e.target.value);
+                    if(getID(e.target.value)) setIsPreviewing(true);
+                 }} 
+               />
+               <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 group-focus-within:opacity-100 transition-opacity">
+                  <Sparkles size={16} className={type === 'valentine' ? 'text-rose-400' : 'text-blue-400'} />
+               </div>
+            </div>
           </div>
-          <button type="submit" disabled={loading || !name} className="w-full bg-rose-600 text-white p-5 rounded-2xl font-bold text-xl shadow-xl hover:bg-rose-700 transition-all active:scale-95 disabled:opacity-50">{loading ? 'Creating...' : 'Create Wall'}</button>
+
+          {/* Theme Selector */}
+          <div className="space-y-3 pb-10">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Visual Theme</label>
+            <div className="grid gap-3">
+              {(Object.keys(THEMES) as WallTheme[]).map((t) => (
+                <button key={t} type="button" onClick={() => setTheme(t)} className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all ${theme === t ? (type === 'valentine' ? 'border-rose-500 bg-white shadow-md' : 'border-blue-500 bg-white shadow-md') : 'border-white/50 bg-white/30'}`}>
+                   <span className="capitalize font-bold text-gray-700">{t.replace('-', ' ')}</span>
+                   {theme === t && <CheckCircle2 className={type === 'valentine' ? 'text-rose-500' : 'text-blue-500'} size={20} />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading || !name} className={`w-full text-white p-5 rounded-3xl font-black text-xl shadow-xl transition-all active:scale-95 disabled:opacity-50 mb-10 ${type === 'valentine' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {loading ? 'Creating space...' : 'Create My Wall'}
+          </button>
         </form>
       </div>
+
+      {/* Hidden Preview Player Overlay */}
       {isPreviewing && getID(musicUrl) && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-rose-100 flex items-center gap-4 z-50">
-          <span className="text-xs font-bold text-gray-600 uppercase">Previewing Vibe...</span>
-          <button onClick={() => setIsPreviewing(false)} className="text-[10px] font-black bg-gray-100 px-2 py-1 rounded-md">STOP</button>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-6 py-4 rounded-full shadow-2xl border border-rose-100 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-10">
+          <div className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse" />
+          <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Vibe Preview</span>
+          <button onClick={() => setIsPreviewing(false)} className="text-[9px] font-black bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors uppercase tracking-tighter">Stop</button>
           <iframe className="hidden" src={`https://www.youtube.com/embed/${getID(musicUrl)}?autoplay=1`} allow="autoplay" />
         </div>
       )}
