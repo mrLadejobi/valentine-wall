@@ -2,17 +2,19 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle, User, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion'; // For interactive UI
+import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle, User, Loader2, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion'; 
 import FloatingHearts from '@/components/FloatingHearts';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(false); // DEFAULT TO SIGN UP
+  const [isLogin, setIsLogin] = useState(false); 
+  const [isForgotPassword, setIsForgotPassword] = useState(false); // NEW STATE
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false); 
+  const [resetSent, setResetSent] = useState(false); // NEW STATE
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const router = useRouter();
@@ -32,7 +34,7 @@ export default function AuthPage() {
       const { data, error } = await supabase.auth.signUp({ 
         email, password,
         options: { 
-          emailRedirectTo: redirectUrl, // THE AUTO-REDIRECT MAGIC
+          emailRedirectTo: redirectUrl, 
           data: { full_name: fullName } 
         }
       });
@@ -47,13 +49,31 @@ export default function AuthPage() {
     }
   };
 
+  // NEW: Handle Password Reset Request
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      setResetSent(true);
+    }
+    setLoading(false);
+  };
+
   return (
     <main className="min-h-screen bg-linear-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
       <FloatingHearts />
       
       <AnimatePresence mode="wait">
-        {isEmailSent ? (
-          /* --- EMAIL SENT VIEW --- */
+        {isEmailSent || resetSent ? (
+          /* --- SUCCESS / CHECK MAIL VIEW --- */
           <motion.div 
             key="email-sent"
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -68,19 +88,48 @@ export default function AuthPage() {
             </div>
             <h1 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Check your Mail!</h1>
             <p className="text-gray-600 mb-8 font-medium leading-relaxed px-4">
-              We've sent a magic link to <span className="text-rose-600 font-bold">{email}</span>. Click it to enter your wall!
+              We've sent a magic link to <span className="text-rose-600 font-bold">{email}</span>. Click it to continue!
             </p>
             <motion.button 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setIsEmailSent(false)}
+              onClick={() => { setIsEmailSent(false); setResetSent(false); setIsForgotPassword(false); }}
               className="w-full bg-gray-100 text-gray-600 py-4 rounded-2xl font-bold hover:bg-gray-200 transition-all"
             >
-              Back to Sign Up
+              Back to Login
             </motion.button>
           </motion.div>
+        ) : isForgotPassword ? (
+          /* --- FORGOT PASSWORD VIEW --- */
+          <motion.div 
+            key="forgot-password"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[40px] shadow-2xl p-10 relative z-10 border border-white"
+          >
+            <button onClick={() => setIsForgotPassword(false)} className="mb-6 text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+              <ArrowLeft size={16} /> Back
+            </button>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight mb-2">Reset Password</h1>
+            <p className="text-gray-500 mb-8 font-medium">Enter your email and we'll send you a link to get back into your wall.</p>
+            
+            <form onSubmit={handleResetRequest} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input type="email" required className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-50 rounded-2xl outline-none focus:border-rose-400 transition-all font-medium" placeholder="cupid@love.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+              </div>
+              {errorMsg && <div className="text-red-500 text-xs font-bold flex items-center gap-1"><AlertCircle size={14} /> {errorMsg}</div>}
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} disabled={loading} className="w-full bg-rose-500 text-white py-5 rounded-2xl font-black text-xl shadow-xl flex items-center justify-center gap-3">
+                {loading ? <Loader2 className="animate-spin" /> : 'Send Reset Link'}
+              </motion.button>
+            </form>
+          </motion.div>
         ) : (
-          /* --- AUTH FORM VIEW --- */
+          /* --- LOGIN / SIGNUP VIEW --- */
           <motion.div 
             key="auth-form"
             initial={{ opacity: 0, y: 20 }}
@@ -88,11 +137,7 @@ export default function AuthPage() {
             className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[40px] shadow-2xl p-10 relative z-10 border border-white"
           >
             <div className="text-center mb-10">
-              <motion.div 
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.7 }}
-                className="w-16 h-16 bg-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-3"
-              >
+              <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.7 }} className="w-16 h-16 bg-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-3">
                 <Heart className="text-white fill-current" size={32} />
               </motion.div>
               <h1 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -123,7 +168,14 @@ export default function AuthPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Secret Password</label>
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Secret Password</label>
+                  {isLogin && (
+                    <button type="button" onClick={() => setIsForgotPassword(true)} className="text-[10px] font-black text-rose-400 hover:text-rose-600 transition-colors uppercase tracking-widest">
+                      Forgot?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input type="password" required className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-50 rounded-2xl outline-none focus:border-rose-400 transition-all font-medium" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -136,12 +188,7 @@ export default function AuthPage() {
                 </motion.div>
               )}
 
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-                disabled={loading} 
-                className="w-full bg-rose-500 text-white py-5 rounded-2xl font-black text-xl shadow-xl hover:bg-rose-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-6"
-              >
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} disabled={loading} className="w-full bg-rose-500 text-white py-5 rounded-2xl font-black text-xl shadow-xl hover:bg-rose-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-6">
                 {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Enter App' : 'Get My Link')}
                 {!loading && <Sparkles size={20} />}
               </motion.button>
