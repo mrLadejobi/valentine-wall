@@ -77,7 +77,7 @@ export default function CreateWallPage() {
             <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/wall/${successSlug}`); setCopied(true); setTimeout(()=>setCopied(false), 2000); }} className="p-2 text-rose-500">{copied ? <Sparkles size={20} /> : <Copy size={20} />}</button>
           </div>
           <div className="space-y-3">
-            <button onClick={() => window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('❤️ Open My Wall!')}&dates=20260214T090000Z/20260214T100000Z`, '_blank')} className="w-full bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-sm border border-rose-100 flex items-center justify-center gap-2"><Calendar size={18} /> Remind me in 2026</button>
+            <button onClick={() => window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('❤️ Open My Wall!')}&dates=20260214T090000Z/20260214T100000Z`, '_blank')} className="w-full bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-sm border border-rose-100 flex items-center justify-center gap-2"><Calendar size={18} /> Remind me</button>
             <button onClick={() => router.push(`/wall/${successSlug}`)} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold">View Wall</button>
           </div>
         </div>
