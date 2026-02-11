@@ -10,11 +10,11 @@ import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import filter from 'leo-profanity';
 
-// CENSORSHIP CONFIG
 filter.add(['fuck', 'fucking', 'bastard', 'stupid', 'dumb', 'idiot', 'crazy', 'ode', 'oloriburuku', 'alainironu', 'pussy', 'breasts', 'bitch', 'fool', 'olosi']);
 
 export default function WallPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const router = useRouter();
 
   // States
   const [wall, setWall] = useState<Wall | null>(null);
@@ -37,20 +37,23 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
       if (wallData) {
         setWall(wallData);
         
-        // --- 2026 LOCK LOGIC ---
+        // --- 2026 ACCURATE LOCK LOGIC ---
         const now = new Date().getTime();
         const unlockDate = new Date(wallData.unlock_date).getTime();
         
         if (now >= unlockDate) {
           setIsUnlocked(true);
-        } else {
-          setIsUnlocked(false);
+          // AUTO-CONFETTI on successful unlock load
+          confetti({
+            particleCount: 150,
+            spread: 100,
+            origin: { y: 0.6 },
+            colors: wallData.type === 'valentine' ? ['#f43f5e', '#ffffff'] : ['#3b82f6', '#ffffff', '#fbbf24']
+          });
         }
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.id === wallData.owner_id) {
-          setIsOwner(true);
-        }
+        if (user && user.id === wallData.owner_id) setIsOwner(true);
 
         const { data: msgs } = await supabase.from('messages').select('*').eq('wall_id', wallData.id).order('created_at', { ascending: false });
         setMessages(msgs || []);
@@ -59,7 +62,7 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
     }
     loadWall();
 
-    const channel = supabase.channel('realtime-wall').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+    const channel = supabase.channel(`wall-${slug}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
       if (wall && payload.new.wall_id === wall.id) setMessages((prev) => [payload.new as Message, ...prev]);
     }).subscribe();
 
@@ -77,6 +80,10 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   const currentTheme = wall ? THEMES[wall.theme as WallTheme] : THEMES['soft-pink'];
   const canOpen = isUnlocked;
 
+  const celebrationText = wall?.type === 'valentine' 
+    ? "Happy Valentine's Day! ❤️" 
+    : `Happy Birthday, ${wall?.name}! 🎂`;
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
@@ -84,19 +91,13 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   };
 
   const handleSocialInvite = async () => {
-    const text = wall?.type === 'valentine' 
-      ? "Leave me a secret message! It stays locked until February 14th, 2026! 🤫💌" 
-      : "Leave me a secret birthday note! It stays locked until my big day! 🎂✨";
-    
+    const text = wall?.type === 'valentine' ? "Secret valentines! Locked till Feb 14, 2026! 🤫💌" : "Birthday notes! Locked until the big day! 🎂✨";
     if (navigator.share) {
       try { await navigator.share({ title: `${wall?.name}'s Wall`, text, url: window.location.href }); } catch (err) {}
-    } else { 
-      handleCopyLink(); 
-      alert("Link copied! Share it with your friends! 📲"); 
-    }
+    } else { handleCopyLink(); alert("Link copied!"); }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse text-xl">Opening the mailbox...</div>;
+  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse text-xl">Opening mailbox...</div>;
   if (!wall) return <div className="h-screen flex flex-col items-center justify-center gap-4 font-bold">Wall not found!</div>;
 
   if (videoID && !hasEntered) {
@@ -107,15 +108,10 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-spin-slow">
              <Music className="text-rose-500" size={40} />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">{wall.name}'s Space</h1>
-          <p className="text-gray-500 mb-10 font-medium tracking-tight uppercase text-xs">Entry requires vibe activation</p>
-          <motion.button 
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            onClick={() => { setHasEntered(true); setIsPlaying(true); }} 
-            className={`px-12 py-5 rounded-full text-white font-black text-xl shadow-2xl transition-all ${currentTheme.accent}`}
-          >
+          <h1 className="text-4xl font-black text-gray-900 mb-2">{wall.name}'s Space</h1>
+          <button onClick={() => { setHasEntered(true); setIsPlaying(true); }} className={`px-12 py-5 rounded-full text-white font-black text-xl shadow-2xl transition-all active:scale-95 ${currentTheme.accent}`}>
             Enter & Play Vibe
-          </motion.button>
+          </button>
         </motion.div>
       </main>
     );
@@ -124,22 +120,34 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   return (
     <div className={`min-h-screen transition-colors duration-700 bg-linear-to-br ${currentTheme.gradient} font-sans overflow-x-hidden`}>
       <FloatingHearts color={currentTheme.heartColor} />
+      
       <div className="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl bg-white/10 backdrop-blur-sm border-x border-white/20">
+        
+        {/* CELEBRATION BANNER */}
+        <AnimatePresence>
+          {isUnlocked && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+              className={`w-full py-4 text-center font-black text-white shadow-inner relative overflow-hidden ${wall.type === 'valentine' ? 'bg-rose-500' : 'bg-blue-500'}`}
+            >
+              <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="relative z-10 flex items-center justify-center gap-3 text-lg">
+                <Sparkles size={18} /> {celebrationText} <Sparkles size={18} />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {view === 'wall' ? (
           <>
             <header className={`px-6 py-8 ${currentTheme.card} border-b border-white/20 sticky top-0 z-20 shadow-sm`}>
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className={`text-3xl font-black ${currentTheme.text} leading-tight`}>{wall.name}'s Wall</h2>
-                  <p className="text-[10px] font-bold opacity-50 uppercase mt-2 tracking-widest">
-                    {wall.type === 'valentine' ? "Unlocks Feb 14, 2026" : `Unlocks ${new Date(wall.unlock_date).toLocaleDateString()}`}
-                  </p>
+                  <p className="text-[10px] font-bold opacity-50 uppercase mt-2 tracking-widest">{wall.type === 'valentine' ? "Unlocks Feb 14, 2026" : `Unlocks ${new Date(wall.unlock_date).toLocaleDateString()}`}</p>
                 </div>
                 <div className="flex gap-2">
-                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleCopyLink} className="p-3 bg-white rounded-2xl shadow-sm border border-rose-100 text-rose-500">
-                    {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                  </motion.button>
-                  {isOwner && <motion.button whileTap={{ scale: 0.9 }} onClick={handleSocialInvite} className="flex items-center gap-2 px-4 py-3 bg-rose-500 text-white rounded-2xl shadow-md font-bold text-sm hover:bg-rose-600 transition-colors"><Share2 size={18} /><span>Invite</span></motion.button>}
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleCopyLink} className="p-3 bg-white rounded-2xl shadow-sm border border-rose-100 text-rose-500">{copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}</motion.button>
+                  {isOwner && <motion.button whileTap={{ scale: 0.9 }} onClick={handleSocialInvite} className="flex items-center gap-2 px-4 py-3 bg-rose-500 text-white rounded-2xl shadow-md font-bold text-sm transition-all hover:bg-rose-600"><Share2 size={18} /><span>Invite</span></motion.button>}
                 </div>
               </div>
             </header>
@@ -154,22 +162,10 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
                   ))}
                 </AnimatePresence>
               </div>
-              {messages.length === 0 && (
-                <div className="text-center py-20 opacity-40">
-                  <Mail className="mx-auto mb-4" size={48} />
-                  <p className="font-bold tracking-tight">Mailbox is empty...</p>
-                </div>
-              )}
             </div>
 
             <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-6">
-              <motion.button 
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                onClick={() => setView('write')} 
-                className={`w-full rounded-full py-5 shadow-2xl ${currentTheme.accent} text-white font-black text-xl flex items-center justify-center gap-3 transition-all ring-4 ring-white/30`}
-              >
-                <Send size={24} /> Write Letter
-              </motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setView('write')} className={`w-full rounded-full py-5 shadow-2xl ${currentTheme.accent} text-white font-black text-xl flex items-center justify-center gap-3 ring-4 ring-white/30`}><Send size={24} /> Write Letter</motion.button>
             </div>
           </>
         ) : (
@@ -178,16 +174,11 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
 
         {videoID && (
           <div className="fixed bottom-32 right-6 z-40">
-            <motion.button 
-              whileTap={{ scale: 0.9 }} onClick={() => setIsPlaying(!isPlaying)} 
-              className={`w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-rose-100 transition-all ${isPlaying ? 'animate-spin-slow' : ''}`}
-            >
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsPlaying(!isPlaying)} className={`w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-rose-100 transition-all ${isPlaying ? 'animate-spin-slow' : ''}`}>
               <div className="absolute inset-0 rounded-full border-4 border-black/5 border-dashed" />
               {isPlaying ? <div className="w-3 h-3 bg-rose-500 rounded-full animate-pulse" /> : <Sparkles size={20} className="text-rose-300" />}
             </motion.button>
-            {isPlaying && (
-              <iframe className="hidden" src={`https://www.youtube.com/embed/${videoID}?autoplay=1&loop=1&playlist=${videoID}`} allow="autoplay" />
-            )}
+            {isPlaying && <iframe className="hidden" src={`https://www.youtube.com/embed/${videoID}?autoplay=1&loop=1&playlist=${videoID}`} allow="autoplay" />}
           </div>
         )}
 
@@ -314,7 +305,7 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
         </div>
 
         <motion.button 
-          whileHover={!isInappropriate ? { scale: 1.02 } : {}} whileTap={!isInappropriate ? { scale: 0.98 } : {}}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           disabled={sending || isInappropriate} 
           className={`w-full py-5 rounded-2xl text-white font-black text-xl shadow-lg transition-all flex items-center justify-center gap-3 ${isInappropriate ? 'bg-gray-300 cursor-not-allowed shadow-none' : theme.accent}`}
         >
