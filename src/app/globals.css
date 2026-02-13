@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+
+
+@keyframes float {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% { transform: translateY(-110vh) scale(1); opacity: 0; }
+}
+
+.animate-float {
+  animation: float linear infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
