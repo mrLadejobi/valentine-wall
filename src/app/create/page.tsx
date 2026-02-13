@@ -61,8 +61,8 @@ export default function CreateWallPage() {
         theme, 
         slug, 
         type,
-        // SAVES AT EXACTLY 5:00 AM LOCAL TIME
-        unlock_date: `${unlockDate}T05:00:00`, 
+        // SAVES AT EXACTLY 10:00 AM LOCAL TIME
+        unlock_date: `${unlockDate}T10:00:00`, 
         owner_id: user.id, 
         music_url: musicUrl,
       }]);
@@ -84,7 +84,7 @@ export default function CreateWallPage() {
     const dateStr = type === 'valentine' ? '20260214' : unlockDate.replace(/-/g, '');
     
     // Setting Google Calendar to 05:00 (5 AM)
-    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T050000/${dateStr}T060000&details=${encodeURIComponent(details)}`;
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T100000/${dateStr}T110000&details=${encodeURIComponent(details)}`;
     window.open(googleUrl, '_blank');
   };
 

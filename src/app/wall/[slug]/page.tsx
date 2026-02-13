@@ -385,7 +385,7 @@ function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: 
           ) : (
             <div className="space-y-6">
               <h3 className="text-2xl font-black text-gray-900 leading-tight">It's Sealed Tight!</h3>
-              <p className="text-gray-500 text-sm font-medium">Unlocks on {wall.type === 'valentine' ? "Feb 14, 2026" : unlockDateString} at 5:00 AM.</p>
+              <p className="text-gray-500 text-sm font-medium">Unlocks on {wall.type === 'valentine' ? "Feb 14, 2026" : unlockDateString} at 10:00 AM.</p>
               <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100">
                 <p className="text-[10px] font-bold text-rose-400 uppercase mb-2 text-left tracking-widest">Sender's Hint:</p>
                 <p className="text-lg font-bold text-rose-700 italic">"{message.hint}"</p>
