@@ -3,7 +3,7 @@ import React, { useState, useEffect, use } from 'react';
 import { supabase } from '@/lib/supabase';
 import { THEMES, STAMPS } from '@/lib/constants';
 import { Wall, Message, WallTheme, StampType, ThemeConfig } from '@/types';
-import { Mail, Lock, Send, Copy, Sparkles, ArrowLeft, X, Share2, Check, Music, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Send, Copy, Sparkles, ArrowLeft, X, Share2, Check, Music, CheckCircle2, Loader2, AlertCircle, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 import confetti from 'canvas-confetti';
@@ -26,30 +26,28 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   const [isOwner, setIsOwner] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Countdown State
+  const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
+
   // Music & Entry States
   const [hasEntered, setHasEntered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoID, setVideoID] = useState<string | null>(null);
 
+  // 1. Fetch Wall & Message data
   useEffect(() => {
     async function loadWall() {
       const { data: wallData } = await supabase.from('walls').select('*').eq('slug', slug).single();
       if (wallData) {
         setWall(wallData);
         
-        // --- 2026 ACCURATE LOCK LOGIC ---
         const now = new Date().getTime();
         const unlockDate = new Date(wallData.unlock_date).getTime();
         
         if (now >= unlockDate) {
           setIsUnlocked(true);
-          // AUTO-CONFETTI on successful unlock load
-          confetti({
-            particleCount: 150,
-            spread: 100,
-            origin: { y: 0.6 },
-            colors: wallData.type === 'valentine' ? ['#f43f5e', '#ffffff'] : ['#3b82f6', '#ffffff', '#fbbf24']
-          });
+          // Auto-confetti if already passed
+          confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
         }
 
         const { data: { user } } = await supabase.auth.getUser();
@@ -63,11 +61,38 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
     loadWall();
 
     const channel = supabase.channel(`wall-${slug}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-      if (wall && payload.new.wall_id === wall.id) setMessages((prev) => [payload.new as Message, ...prev]);
+      setMessages((prev) => [payload.new as Message, ...prev]);
     }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [slug, wall?.id]);
+  }, [slug]);
+
+  // 2. Countdown Timer Logic
+  useEffect(() => {
+    if (!wall || isUnlocked) return;
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const target = new Date(wall.unlock_date).getTime();
+      const distance = target - now;
+
+      if (distance <= 0) {
+        setIsUnlocked(true);
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+        clearInterval(timer);
+        return;
+      }
+
+      setTimeLeft({
+        d: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        s: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [wall, isUnlocked]);
 
   useEffect(() => {
     if (wall?.music_url) {
@@ -91,14 +116,14 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
   };
 
   const handleSocialInvite = async () => {
-    const text = wall?.type === 'valentine' ? "Secret valentines! Locked till Feb 14, 2026! 🤫💌" : "Birthday notes! Locked until the big day! 🎂✨";
+    const text = wall?.type === 'valentine' ? "Secret valentines! Locked till Feb 14, 2026 at 5 AM! 🤫💌" : "Birthday notes! Locked until the big day! 🎂✨";
     if (navigator.share) {
       try { await navigator.share({ title: `${wall?.name}'s Wall`, text, url: window.location.href }); } catch (err) {}
     } else { handleCopyLink(); alert("Link copied!"); }
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse text-xl">Opening mailbox...</div>;
-  if (!wall) return <div className="h-screen flex flex-col items-center justify-center gap-4 font-bold">Wall not found!</div>;
+  if (!wall) return <div className="h-screen flex flex-col items-center justify-center gap-4 font-bold text-gray-800">Wall not found!</div>;
 
   if (videoID && !hasEntered) {
     return (
@@ -108,10 +133,15 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-spin-slow">
              <Music className="text-rose-500" size={40} />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 mb-2">{wall.name}'s Space</h1>
-          <button onClick={() => { setHasEntered(true); setIsPlaying(true); }} className={`px-12 py-5 rounded-full text-white font-black text-xl shadow-2xl transition-all active:scale-95 ${currentTheme.accent}`}>
+          <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">{wall.name}'s Space</h1>
+          <p className="text-gray-500 mb-10 font-medium tracking-tight uppercase text-xs">Vibe activation required to enter</p>
+          <motion.button 
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => { setHasEntered(true); setIsPlaying(true); }} 
+            className={`px-12 py-5 rounded-full text-white font-black text-xl shadow-2xl transition-all ${currentTheme.accent}`}
+          >
             Enter & Play Vibe
-          </button>
+          </motion.button>
         </motion.div>
       </main>
     );
@@ -123,7 +153,6 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
       
       <div className="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl bg-white/10 backdrop-blur-sm border-x border-white/20">
         
-        {/* CELEBRATION BANNER */}
         <AnimatePresence>
           {isUnlocked && (
             <motion.div 
@@ -143,11 +172,39 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className={`text-3xl font-black ${currentTheme.text} leading-tight`}>{wall.name}'s Wall</h2>
-                  <p className="text-[10px] font-bold opacity-50 uppercase mt-2 tracking-widest">{wall.type === 'valentine' ? "Unlocks Feb 14, 2026" : `Unlocks ${new Date(wall.unlock_date).toLocaleDateString()}`}</p>
+                  
+                  {/* COUNTDOWN TIMER UI */}
+                  <div className="mt-3">
+                    {isUnlocked ? (
+                      <p className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] flex items-center gap-1">
+                         <CheckCircle2 size={12} /> Wall Unlocked
+                      </p>
+                    ) : timeLeft ? (
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Unlocking in:</p>
+                        <div className="flex gap-1.5 text-rose-600">
+                          {[
+                            { label: 'd', value: timeLeft.d },
+                            { label: 'h', value: timeLeft.h },
+                            { label: 'm', value: timeLeft.m },
+                            { label: 's', value: timeLeft.s },
+                          ].map((unit) => (
+                            <div key={unit.label} className="flex flex-col items-center bg-white/60 backdrop-blur-sm rounded-lg px-2 py-1 min-w-8 border border-rose-100">
+                              <span className="text-xs font-black leading-none">{unit.value}</span>
+                              <span className="text-[7px] font-bold opacity-50 uppercase">{unit.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
+
                 <div className="flex gap-2">
-                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleCopyLink} className="p-3 bg-white rounded-2xl shadow-sm border border-rose-100 text-rose-500">{copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}</motion.button>
-                  {isOwner && <motion.button whileTap={{ scale: 0.9 }} onClick={handleSocialInvite} className="flex items-center gap-2 px-4 py-3 bg-rose-500 text-white rounded-2xl shadow-md font-bold text-sm transition-all hover:bg-rose-600"><Share2 size={18} /><span>Invite</span></motion.button>}
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleCopyLink} className="p-3 bg-white rounded-2xl shadow-sm border border-rose-100 text-rose-500 transition-all">
+                    {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+                  </motion.button>
+                  {isOwner && <motion.button whileTap={{ scale: 0.9 }} onClick={handleSocialInvite} className="flex items-center gap-2 px-4 py-3 bg-rose-500 text-white rounded-2xl shadow-md font-bold text-sm hover:bg-rose-600 transition-all"><Share2 size={18} /><span>Invite</span></motion.button>}
                 </div>
               </div>
             </header>
@@ -162,23 +219,35 @@ export default function WallPage({ params }: { params: Promise<{ slug: string }>
                   ))}
                 </AnimatePresence>
               </div>
+              {messages.length === 0 && (
+                <div className="text-center py-20 opacity-40">
+                  <Mail className="mx-auto mb-4" size={48} />
+                  <p className="font-bold">No letters yet...</p>
+                </div>
+              )}
             </div>
 
             <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-6">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setView('write')} className={`w-full rounded-full py-5 shadow-2xl ${currentTheme.accent} text-white font-black text-xl flex items-center justify-center gap-3 ring-4 ring-white/30`}><Send size={24} /> Write Letter</motion.button>
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setView('write')} className={`w-full rounded-full py-5 shadow-2xl ${currentTheme.accent} text-white font-black text-xl flex items-center justify-center gap-3 transition-all ring-4 ring-white/30`}><Send size={24} /> Write Letter</motion.button>
             </div>
           </>
         ) : (
           <WriteView wallId={wall.id} theme={currentTheme} onCancel={() => setView('wall')} onSuccess={() => setView('wall')} />
         )}
 
-        {videoID && (
+        {/* FIXED MUSIC PLAYER */}
+        {videoID && hasEntered && (
           <div className="fixed bottom-32 right-6 z-40">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsPlaying(!isPlaying)} className={`w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-rose-100 transition-all ${isPlaying ? 'animate-spin-slow' : ''}`}>
+            <motion.button 
+              whileTap={{ scale: 0.9 }} onClick={() => setIsPlaying(!isPlaying)} 
+              className={`w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center border-2 border-rose-100 transition-all ${isPlaying ? 'animate-spin-slow' : ''}`}
+            >
               <div className="absolute inset-0 rounded-full border-4 border-black/5 border-dashed" />
               {isPlaying ? <div className="w-3 h-3 bg-rose-500 rounded-full animate-pulse" /> : <Sparkles size={20} className="text-rose-300" />}
             </motion.button>
-            {isPlaying && <iframe className="hidden" src={`https://www.youtube.com/embed/${videoID}?autoplay=1&loop=1&playlist=${videoID}`} allow="autoplay" />}
+            {isPlaying && (
+              <iframe className="hidden" src={`https://www.youtube.com/embed/${videoID}?autoplay=1&loop=1&playlist=${videoID}`} allow="autoplay" />
+            )}
           </div>
         )}
 
@@ -243,20 +312,12 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
   if (isSent) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white z-50">
-        <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6 animate-bounce">
-          <CheckCircle2 size={40} />
-        </div>
+        <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6 animate-bounce"><CheckCircle2 size={40} /></div>
         <h2 className="text-3xl font-black text-gray-900 mb-2 leading-tight">Letter Sealed!</h2>
-        <p className="text-gray-500 mb-10 font-medium">Your secret note has been delivered safely.</p>
+        <p className="text-gray-500 mb-10 font-medium">Delivered safely to the mailbox.</p>
         <div className="w-full space-y-4">
-          <motion.button 
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={() => router.push('/auth')}
-            className="w-full py-5 bg-rose-500 text-white rounded-3xl font-black text-xl shadow-xl shadow-rose-200 flex items-center justify-center gap-2"
-          >
-            Create My Own Wall <Sparkles size={20} />
-          </motion.button>
-          <button onClick={onSuccess} className="text-gray-400 font-bold hover:text-gray-600 transition-colors uppercase text-xs tracking-widest">Back to mailbox</button>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => router.push('/auth')} className="w-full py-5 bg-rose-500 text-white rounded-3xl font-black text-xl shadow-xl flex items-center justify-center gap-2">Create My Own Wall <Sparkles size={20} /></motion.button>
+          <button onClick={onSuccess} className="text-gray-400 font-bold uppercase text-xs tracking-widest">Back to mailbox</button>
         </div>
       </motion.div>
     );
@@ -273,22 +334,14 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
         <div className={`bg-white p-6 rounded-2xl shadow-sm border-t-8 transition-all duration-300 relative ${isInappropriate ? 'border-red-500 bg-red-50' : 'border-rose-400'}`}>
           <textarea
             required
-            maxLength={2000}
-            placeholder="Write your secret message here..."
-            className="w-full h-64 border-none resize-none focus:ring-0 text-lg font-serif italic bg-transparent"
+            maxLength={5000}
+            placeholder="Pour your heart out here..."
+            className="w-full h-80 border-none resize-none focus:ring-0 text-lg font-serif italic bg-transparent"
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
-          <AnimatePresence>
-            {isInappropriate && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute top-2 right-4 flex items-center gap-1 text-red-600 font-black text-[10px] uppercase tracking-widest bg-white px-2 py-1 rounded-full shadow-sm border border-red-100">
-                <AlertCircle size={12} /> Unkind word detected
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div className="absolute bottom-4 right-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">
-             {body.length} / 2000
-          </div>
+          <div className="absolute bottom-4 right-4 text-[9px] font-black text-gray-300 uppercase tracking-widest">{body.length.toLocaleString()} / 5,000</div>
+          {isInappropriate && <div className="absolute top-2 right-4 flex items-center gap-1 text-red-600 font-black text-[10px] uppercase tracking-widest bg-white px-2 py-1 rounded-full shadow-sm border border-red-100"><AlertCircle size={12} /> Be kind ❤️</div>}
         </div>
 
         <div className="space-y-4 bg-white p-6 rounded-2xl shadow-sm">
@@ -299,16 +352,12 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
             ))}
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <input placeholder="From (Optional)" className={`w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium ${isInappropriate ? 'focus:border-red-300' : 'focus:border-rose-300'}`} value={author} onChange={(e)=>setAuthor(e.target.value)} />
-            <input required placeholder="Hint (Guess who?)" className={`w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium ${isInappropriate ? 'focus:border-red-300' : 'focus:border-rose-300'}`} value={hint} onChange={(e)=>setHint(e.target.value)} />
+            <input placeholder="From (Optional)" className="w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium" value={author} onChange={(e)=>setAuthor(e.target.value)} />
+            <input required placeholder="Hint (Guess who?)" className="w-full p-4 bg-gray-50 rounded-xl border outline-none focus:bg-white transition-all font-medium" value={hint} onChange={(e)=>setHint(e.target.value)} />
           </div>
         </div>
 
-        <motion.button 
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          disabled={sending || isInappropriate} 
-          className={`w-full py-5 rounded-2xl text-white font-black text-xl shadow-lg transition-all flex items-center justify-center gap-3 ${isInappropriate ? 'bg-gray-300 cursor-not-allowed shadow-none' : theme.accent}`}
-        >
+        <motion.button whileHover={!isInappropriate ? { scale: 1.02 } : {}} whileTap={!isInappropriate ? { scale: 0.98 } : {}} disabled={sending || isInappropriate} className={`w-full py-5 rounded-2xl text-white font-black text-xl shadow-lg flex items-center justify-center gap-3 ${isInappropriate ? 'bg-gray-300 cursor-not-allowed' : theme.accent}`}>
           {isInappropriate ? "Please be kind ❤️" : sending ? <Loader2 className="animate-spin" /> : "Seal & Send Letter"}
         </motion.button>
       </form>
@@ -329,12 +378,14 @@ function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: 
           {isUnlocked ? (
             <div className="space-y-4">
               <span className="text-rose-500 font-bold text-xs uppercase tracking-widest">A message from {message.author}</span>
-              <p className="text-xl font-serif italic text-gray-700 leading-relaxed whitespace-pre-wrap">"{message.body}"</p>
+              <div className="max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                <p className="text-xl font-serif italic text-gray-700 leading-relaxed whitespace-pre-wrap text-left">"{message.body}"</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
               <h3 className="text-2xl font-black text-gray-900 leading-tight">It's Sealed Tight!</h3>
-              <p className="text-gray-500 text-sm">Unlocks on {wall.type === 'valentine' ? "February 14th, 2026" : unlockDateString}.</p>
+              <p className="text-gray-500 text-sm font-medium">Unlocks on {wall.type === 'valentine' ? "Feb 14, 2026" : unlockDateString} at 5:00 AM.</p>
               <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100">
                 <p className="text-[10px] font-bold text-rose-400 uppercase mb-2 text-left tracking-widest">Sender's Hint:</p>
                 <p className="text-lg font-bold text-rose-700 italic">"{message.hint}"</p>
@@ -343,7 +394,7 @@ function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: 
           )}
         </div>
         <div className="p-6 bg-gray-50 border-t flex justify-center">
-          <button onClick={onClose} className="text-gray-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-gray-600 transition-colors">Close Envelope</button>
+          <button onClick={onClose} className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Close Envelope</button>
         </div>
       </motion.div>
     </div>
