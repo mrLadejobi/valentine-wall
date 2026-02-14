@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react'; // Added useEffect
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseEnvMissing } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; 
@@ -8,11 +8,13 @@ import FloatingHearts from '@/components/FloatingHearts';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(false); 
+  const [isReset, setIsReset] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isEmailSent, setIsEmailSent] = useState(false); 
+  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true); // New loading state for persistence
 
@@ -36,6 +38,7 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+    setResetEmailSent(false);
 
     const redirectUrl = `${window.location.origin}/dashboard`;
 
@@ -76,6 +79,29 @@ export default function AuthPage() {
       </main>
     );
   }
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+    setResetEmailSent(false);
+
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (window.location.hostname === 'localhost'
+        ? window.location.origin
+        : 'https://thelovewall.vercel.app');
+    const redirectTo = `${siteUrl}/auth/reset`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      setResetEmailSent(true);
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-linear-to-br from-pink-50 to-rose-100 flex items-center justify-center p-6 relative overflow-hidden">
@@ -135,6 +161,11 @@ export default function AuthPage() {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
+              {supabaseEnvMissing && (
+                <div className="text-red-600 text-xs font-bold flex items-center gap-1 ml-1">
+                  <AlertCircle size={14} /> Missing `NEXT_PUBLIC_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+                </div>
+              )}
               {!isLogin && (
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }} 
@@ -191,6 +222,17 @@ export default function AuthPage() {
                 {isLogin ? "New? Click here to sign up" : "Already have a wall? Login"}
               </motion.button>
             </div>
+
+            {isLogin && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => { setIsReset(true); setErrorMsg(null); setResetEmailSent(false); }}
+                  className="text-[11px] font-black text-gray-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
