@@ -137,6 +137,64 @@ export default function AuthPage() {
               Back to Login
             </motion.button>
           </motion.div>
+        ) : isReset ? (
+          <motion.div 
+            key="reset-form"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-[40px] shadow-2xl p-10 relative z-10 border border-white"
+          >
+            <div className="text-center mb-10">
+              <div className="w-16 h-16 bg-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-3">
+                <Mail className="text-white" size={28} />
+              </div>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tight">Reset Password</h1>
+              <p className="text-gray-500 mt-2 font-medium">
+                Enter your email and we&apos;ll send a reset link.
+              </p>
+            </div>
+
+            <form onSubmit={handleReset} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input type="email" required className="w-full pl-12 pr-4 py-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-rose-400 focus:bg-white transition-all font-medium shadow-sm" placeholder="cupid@love.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+              </div>
+
+              {resetEmailSent && (
+                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-green-600 text-xs font-bold flex items-center gap-1 ml-1">
+                  <Inbox size={14} /> Reset email sent. Check your inbox.
+                </motion.div>
+              )}
+
+              {errorMsg && (
+                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="text-red-500 text-xs font-bold flex items-center gap-1 ml-1">
+                  <AlertCircle size={14} /> {errorMsg}
+                </motion.div>
+              )}
+
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={loading} 
+                className="w-full bg-rose-500 text-white py-5 rounded-2xl font-black text-xl shadow-xl hover:bg-rose-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-6"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : 'Send Reset Link'}
+                {!loading && <ArrowRight size={20} />}
+              </motion.button>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
+              <button 
+                onClick={() => { setIsReset(false); setIsLogin(true); setErrorMsg(null); setResetEmailSent(false); }} 
+                className="text-xs font-black text-rose-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
+              >
+                Back to Login
+              </button>
+            </div>
+          </motion.div>
         ) : (
           <motion.div 
             key="auth-form"
