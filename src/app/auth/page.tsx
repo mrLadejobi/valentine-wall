@@ -86,11 +86,7 @@ export default function AuthPage() {
     setErrorMsg(null);
     setResetEmailSent(false);
 
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (window.location.hostname === 'localhost'
-        ? window.location.origin
-        : 'https://thelovewall.vercel.app');
+    const siteUrl = 'https://thelovewall.vercel.app';
     const redirectTo = `${siteUrl}/auth/reset`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
