@@ -16,10 +16,17 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: 'Envelope Wall - Secret Valentine & Birthday Messages',
   description: 'Create a secret mailbox for your friends to leave messages that unlock on your special day!',
+  manifest: '/manifest.json',
   openGraph: {
     title: 'Envelope Wall',
     description: 'Leave me a secret message! 🤫',
     images: ['/og-image.png'], // You can add a nice heart image in your public folder
+  },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'LoveWall',
   },
 };
 

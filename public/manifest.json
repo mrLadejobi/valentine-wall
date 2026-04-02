@@ -1,0 +1,22 @@
+{
+  "name": "LoveWall",
+  "short_name": "LoveWall",
+  "description": "Secret envelopes for your special moments.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff1f2",
+  "theme_color": "#f43f5e",
+  "icons": [
+    {
+      "src": "https://mode-valentine-wall.vercel.app/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "https://mode-valentine-wall.vercel.app/favicon.ico",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
