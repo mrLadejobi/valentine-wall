@@ -7,16 +7,23 @@ export default function FloatingHearts({ color }: { color?: string }) {
   const [hearts, setHearts] = useState<any[]>([]);
 
   useEffect(() => {
-    const generatedHearts = Array.from({ length: 15 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      duration: `${10 + Math.random() * 20}s`,
-      delay: `${Math.random() * 10}s`,
-      opacity: 0.1 + Math.random() * 0.3,
-      scale: 0.5 + Math.random() * 1,
-    }));
-    setHearts(generatedHearts);
-  }, []);
+  // 1. Check if we are on a mobile screen (smaller than 768px)
+  const isMobile = window.innerWidth < 768;
+  
+  // 2. Reduce heart count on mobile (8 instead of 15) to save battery/CPU
+  const heartCount = isMobile ? 8 : 15;
+
+  const generatedHearts = Array.from({ length: heartCount }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    duration: `${10 + Math.random() * 20}s`,
+    delay: `${Math.random() * 10}s`,
+    opacity: 0.1 + Math.random() * 0.3,
+    scale: 0.5 + Math.random() * 1,
+  }));
+  
+  setHearts(generatedHearts);
+}, []);
 
   // Important: If hearts haven't generated yet, don't show anything
   if (hearts.length === 0) return null;
@@ -34,6 +41,7 @@ export default function FloatingHearts({ color }: { color?: string }) {
             animationDelay: heart.delay,
             opacity: heart.opacity,
             transform: `scale(${heart.scale})`,
+            willChange: 'transform',
           }}
         >
           {/* Ensure fill-current is present so the color applies to the inside */}
