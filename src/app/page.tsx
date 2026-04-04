@@ -1,42 +1,56 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Sparkles, Mail } from 'lucide-react';
+import { Heart, Sparkles, Mail, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-linear-to-br from-pink-50 to-rose-100 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-      <FloatingHearts />
+    <main className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+      {/* Cinematic Background Layer */}
+      <div className="bg-mesh" />
+      <FloatingHearts color="text-rose-400" />
       
-      <div className="z-10 max-w-md animate-in fade-in zoom-in duration-700">
-        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-rose-200/50 ring-4 ring-white/50 animate-bounce">
-          <Heart className="w-12 h-12 text-rose-500 fill-rose-500" />
-        </div>
-        
-        <h1 className="text-6xl font-black text-transparent bg-clip-text bg-linear-to-r from-rose-600 to-pink-500 mb-6 tracking-tight leading-tight">
-          Valentine<br/>Envelope Wall
-        </h1>
-        
-        <p className="text-gray-600 mb-10 text-lg leading-relaxed">
-          Create your digital mailbox, share your unique link, and collect sealed letters from friends. 
-          <span className="block mt-2 font-semibold text-rose-500 underline decoration-rose-200 underline-offset-4">
-            Everything unlocks February 14th.
-          </span>
-        </p>
-
-        <Link href="/auth" className="group relative inline-block w-full">
-          <div className="absolute -inset-1 bg-linear-to-r from-pink-600 to-rose-600 rounded-2xl blur opacity-25 group-hover:opacity-60 transition duration-300"></div>
-          <div className="relative rounded-2xl px-8 py-5 bg-rose-500 text-white font-bold text-xl shadow-xl flex items-center justify-center gap-3 transform group-hover:-translate-y-1 transition-all active:scale-95">
-            <Sparkles size={24} className="text-rose-200" />
-            Start My Wall
+      <div className="z-10 max-w-2xl w-full text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        >
+          {/* Glass Header Icon */}
+          <div className="w-24 h-24 glass-card rounded-4xl flex items-center justify-center mx-auto mb-10 rotate-3 hover:rotate-0 transition-transform duration-500">
+            <Heart className="text-rose-500 fill-rose-500" size={40} />
           </div>
-        </Link>
-        
-        <div className="mt-8 flex items-center justify-center gap-2 text-rose-400 text-sm font-medium">
-          <Mail size={16} />
-          <span>Over 10,000 letters sent worldwide</span>
-        </div>
+          
+          <h1 className="text-6xl md:text-8xl font-black text-gray-900 mb-6 tracking-tighter leading-[0.9]">
+            Love<span className="text-rose-500">Wall</span>
+          </h1>
+          
+          <p className="text-gray-600 text-lg md:text-xl font-medium mb-12 max-w-lg mx-auto leading-relaxed">
+            The world's most beautiful digital mailbox for 
+            <span className="text-rose-500"> Valentine's 2026</span>.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link href="/auth?mode=signup" className="px-10 py-5 bg-gray-900 text-white rounded-full font-black text-xl shadow-2xl flex items-center gap-3">
+                Create My Wall <ArrowRight size={20} />
+              </Link>
+            </motion.div>
+            
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link href="/auth?mode=login" className="px-10 py-5 glass-card text-gray-900 rounded-full font-black text-xl flex items-center gap-3">
+                Login
+              </Link>
+            </motion.div>
+          </div>
+
+          <div className="mt-16 flex items-center justify-center gap-8 opacity-40 grayscale">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest"><Mail size={16}/> 10k+ Letters</div>
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest"><Sparkles size={16}/> 100% Secret</div>
+          </div>
+        </motion.div>
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
-export type WallType = 'valentine' | 'birthday';
-export type WallTheme = 'soft-pink' | 'lavender' | 'warm-peach' | 'classic-red' | 'midnight-romance' | 'birthday-blue' | 'birthday-gold';
-export type StampType = 'heart' | 'rose' | 'lips' | 'bear' | 'star' | 'cake' | 'balloon' | 'gift' | 'party';
+export type WallType = 'valentine' | 'birthday' | 'graduation';
+export type WallTheme = 'soft-pink' | 'lavender' | 'warm-peach' | 'classic-red' | 'midnight-romance' | 'birthday-blue' | 'birthday-gold' | 'ivy-league' | 'academic-gold';
+export type StampType = 'heart' | 'rose' | 'lips' | 'bear' | 'star' | 'cake' | 'balloon' | 'gift' | 'party' | 'cap' | 'scroll' | 'champagne' | 'medal';
 
 export interface ThemeConfig {
   bg: string;
@@ -22,6 +22,7 @@ export interface Wall {
   unlock_date: string;
   owner_id: string;
   music_url?: string;
+  custom_prompt?: string;
   created_at?: string; 
 }
 

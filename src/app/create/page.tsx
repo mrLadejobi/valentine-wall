@@ -4,24 +4,29 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { THEMES, DEFAULT_VIBES } from '@/lib/constants';
 import { WallTheme, WallType } from '@/types';
-import { ArrowLeft, Heart, CheckCircle2, Copy, Share2, Sparkles, ExternalLink, LayoutDashboard, Music, Calendar } from 'lucide-react';
+import { 
+  ArrowLeft, Heart, CheckCircle2, Copy, 
+  Sparkles, ExternalLink, LayoutDashboard, Music, 
+  Calendar, User, PartyPopper, ChevronRight, ChevronLeft, Loader2,
+  GraduationCap, MessageSquareQuote 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 import confetti from 'canvas-confetti';
 
 export default function CreateWallPage() {
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [type, setType] = useState<WallType>('valentine');
-  
-  // DEFAULT SET TO 2026-02-14
   const [unlockDate, setUnlockDate] = useState('2026-02-14'); 
-  
+  const [customPrompt, setCustomPrompt] = useState(''); // NEW: For Graduation
   const [theme, setTheme] = useState<WallTheme>('soft-pink');
+  const [musicUrl, setMusicUrl] = useState('');
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [musicUrl, setMusicUrl] = useState('');
-  
-  // Success & Preview States
-  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [successSlug, setSuccessSlug] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -31,9 +36,10 @@ export default function CreateWallPage() {
     const checkUser = async () => {
       const { data: { user: activeUser } } = await supabase.auth.getUser();
       if (!activeUser) {
-        router.push('/auth');
+        router.replace('/auth?mode=login');
       } else {
         setUser(activeUser);
+        setIsCheckingAuth(false);
       }
     };
     checkUser();
@@ -45,159 +51,202 @@ export default function CreateWallPage() {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !user) return;
+  const handleCreate = async () => {
+    if (!user?.id) return;
     setLoading(true);
+    const cleanName = name.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+    const slug = `${cleanName}-${Math.random().toString(36).substring(2, 6)}`;
 
-    const cleanName = name.toLowerCase().trim().replace(/[']/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-    const randomId = Math.random().toString(36).substring(2, 6);
-    const slug = `${cleanName}-${randomId}`;
-
-    const { error } = await supabase
-      .from('walls')
-      .insert([{ 
-        name: name.trim(), 
-        theme, 
-        slug, 
-        type,
-        // SAVES AT EXACTLY 10:00 AM LOCAL TIME
-        unlock_date: `${unlockDate}T10:00:00`, 
-        owner_id: user.id, 
-        music_url: musicUrl,
-      }]);
+    const { error } = await supabase.from('walls').insert([{ 
+      name: name.trim(), 
+      theme, 
+      slug, 
+      type,
+      custom_prompt: type === 'graduation' ? customPrompt : null, // NEW: Save prompt
+      unlock_date: `${unlockDate}T10:00:00`, 
+      owner_id: user.id, 
+      music_url: musicUrl,
+    }]);
 
     if (error) {
-      alert("Database Error: " + error.message);
+      alert(error.message);
       setLoading(false);
     } else {
-      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      confetti({ 
+        particleCount: 150, 
+        spread: 70, 
+        origin: { y: 0.6 },
+        colors: type === 'graduation' ? ['#fbbf24', '#000000', '#ffffff'] : undefined
+      });
       setSuccessSlug(slug);
-      setLoading(false);
     }
   };
 
-  // UPDATED CALENDAR LOGIC FOR 5:00 AM
-  const handleAddToCalendar = () => {
-    const title = `❤️ Open My ${type === 'valentine' ? 'Valentine' : 'Birthday'} Wall!`;
-    const details = `Your secret envelopes are now unlocked! Check them here: ${window.location.origin}/dashboard`;
-    const dateStr = type === 'valentine' ? '20260214' : unlockDate.replace(/-/g, '');
-    
-    // Setting Google Calendar to 05:00 (5 AM)
-    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}T100000/${dateStr}T110000&details=${encodeURIComponent(details)}`;
-    window.open(googleUrl, '_blank');
-  };
-
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/wall/${successSlug}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!user) return <div className="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse">Checking credentials...</div>;
+  if (isCheckingAuth) {
+    return (
+      <main className="h-screen flex items-center justify-center bg-pink-50">
+        <Loader2 className="animate-spin text-rose-500" size={40} />
+      </main>
+    );
+  }
 
   if (successSlug) {
     return (
-      <main className={`min-h-screen ${THEMES[theme].bg} flex items-center justify-center p-6 relative overflow-hidden`}>
+      <main className="min-h-screen relative flex items-center justify-center p-6 overflow-hidden">
+        <div className="bg-mesh" />
         <FloatingHearts color={THEMES[theme].heartColor} />
-        <div className="max-w-md w-full bg-white/90 backdrop-blur-xl rounded-[40px] p-8 shadow-2xl text-center relative z-10 border border-white animate-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 size={48} /></div>
-          <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Wall Created!</h2>
-          <p className="text-gray-500 mb-8 text-sm">Unlocks {type === 'valentine' ? 'Feb 14, 2026' : new Date(unlockDate).toLocaleDateString()} at 5:00 AM.</p>
-          
-          <div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-400 truncate mr-4">{window.location.origin}/wall/{successSlug}</span>
-            <button onClick={handleCopyLink} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">{copied ? <Sparkles size={20} /> : <Copy size={20} />}</button>
-          </div>
-
-          <div className="space-y-3">
-            <button 
-              onClick={handleAddToCalendar} 
-              className="w-full bg-rose-50 text-rose-500 py-4 rounded-2xl font-bold text-sm border border-rose-100 flex items-center justify-center gap-2 hover:bg-rose-100 transition-all"
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full glass-card rounded-[48px] p-10 text-center relative z-10 border border-white shadow-2xl">
+          <div className="w-20 h-20 bg-green-500 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-12"><CheckCircle2 size={40} /></div>
+          <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tighter">Success!</h2>
+          <p className="text-gray-500 mb-8 font-medium">Your {type} wall is live and ready.</p>
+          <div className="space-y-4">
+            <button onClick={() => { 
+                const url = `${window.location.origin}/wall/${successSlug}`;
+                navigator.clipboard.writeText(url); 
+                setCopied(true); 
+                setTimeout(()=>setCopied(false), 2000); 
+              }} 
+              className="w-full py-4 glass-card rounded-2xl flex items-center justify-between px-6 hover:bg-white/60 transition-all border-dashed border-2 border-rose-200"
             >
-              <Calendar size={18} /> Remind me at 5 AM
+              <span className="text-xs font-bold text-gray-400 truncate mr-4 italic">.../wall/{successSlug}</span>
+              {copied ? <CheckCircle2 size={20} className="text-green-500" /> : <Copy size={20} className="text-rose-500" />}
             </button>
-            <button onClick={() => router.push(`/wall/${successSlug}`)} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-black transition-all">View My Wall</button>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => router.push(`/wall/${successSlug}`)} className="w-full py-5 bg-gray-900 text-white rounded-2xl font-black text-xl shadow-xl">Go to Wall</motion.button>
           </div>
-        </div>
+        </motion.div>
       </main>
     );
   }
 
   return (
-    <main className={`min-h-screen transition-all duration-500 ${THEMES[theme].bg} p-6 relative overflow-x-hidden pb-24`}>
-      <FloatingHearts color={THEMES[theme].heartColor} />
-      <div className="max-w-md mx-auto relative z-10">
-        <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2 text-gray-500 mb-6 hover:text-gray-800 transition-colors"><ArrowLeft size={28} /></button>
-        <h2 className="text-4xl font-black text-gray-900 mb-8 tracking-tight leading-tight">Design your wall</h2>
-        
-        <form onSubmit={handleCreate} className="space-y-8">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Wall Display Name</label>
-            <input required maxLength={20} className={`w-full p-5 bg-white/70 backdrop-blur-md rounded-2xl border-2 border-transparent outline-none text-lg font-medium transition-all ${type === 'valentine' ? 'focus:border-rose-400' : 'focus:border-blue-400'}`} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My Secret Collection" />
-          </div>
-
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Occasion</label>
-             <div className="flex bg-gray-100 p-1 rounded-2xl shadow-inner">
-                <button type="button" onClick={() => {setType('valentine'); setUnlockDate('2026-02-14');}} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'valentine' ? 'bg-white shadow-sm text-rose-500' : 'text-gray-500'}`}>Valentine</button>
-                <button type="button" onClick={() => setType('birthday')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${type === 'birthday' ? 'bg-white shadow-sm text-blue-500' : 'text-gray-500'}`}>Birthday</button>
-              </div>
-          </div>
-
-          {type === 'birthday' && (
-            <div className="animate-in slide-in-from-top-4 duration-300">
-               <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Birthday Date</label>
-               <input type="date" required className="w-full p-4 bg-white/70 rounded-2xl border-none outline-none focus:ring-2 focus:ring-blue-400 font-medium" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2"><Music size={14} /> Set the Vibe (Music)</label>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {(DEFAULT_VIBES as any[]).map((vibe) => (
-                <button key={vibe.url} type="button" onClick={() => { setMusicUrl(vibe.url); setIsPreviewing(true); }} className={`text-xs p-3 rounded-xl border-2 font-bold transition-all ${musicUrl === vibe.url ? (type === 'valentine' ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-blue-500 bg-blue-50 text-blue-600') : 'border-gray-100 bg-white/30 text-gray-400'}`}>{vibe.label}</button>
-              ))}
-            </div>
-            <input 
-              placeholder="Paste a YouTube Link here..." 
-              className={`w-full p-4 bg-white/70 backdrop-blur-md rounded-2xl border-2 border-transparent outline-none transition-all text-sm font-medium ${type === 'valentine' ? 'focus:border-rose-400' : 'focus:border-blue-400'}`} 
-              value={musicUrl} 
-              onChange={(e) => {
-                 setMusicUrl(e.target.value);
-                 if(getID(e.target.value)) setIsPreviewing(true);
-              }} 
-            />
-          </div>
-
-          <div className="space-y-3 pb-10">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Visual Theme</label>
-            <div className="grid gap-3">
-              {(Object.keys(THEMES) as WallTheme[]).map((t) => (
-                <button key={t} type="button" onClick={() => setTheme(t)} className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all group ${theme === t ? (type === 'valentine' ? 'border-rose-500 bg-white shadow-md' : 'border-blue-500 bg-white shadow-md') : 'border-white/50 bg-white/30 hover:bg-white/50'}`}>
-                   <span className="capitalize font-bold text-gray-700">{t.replace('-', ' ')}</span>
-                   {theme === t && <CheckCircle2 className={type === 'valentine' ? "text-rose-500" : "text-blue-500"} size={20} />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button type="submit" disabled={loading || !name} className={`w-full text-white p-5 rounded-3xl font-black text-xl shadow-xl transition-all active:scale-95 disabled:opacity-50 mb-10 ${type === 'valentine' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-            {loading ? 'Creating space...' : 'Create My Wall'}
+    <main className="min-h-screen relative flex flex-col lg:flex-row overflow-hidden">
+      <div className="bg-mesh" />
+      
+      <div className="lg:w-1/2 p-6 lg:p-12 z-10 flex flex-col justify-center">
+        <div className="max-w-md mx-auto w-full">
+          <button onClick={() => router.push('/dashboard')} className="mb-8 text-gray-400 hover:text-gray-900 flex items-center gap-2 font-bold uppercase text-[10px] tracking-widest transition-colors">
+            <ArrowLeft size={16} /> Dashboard
           </button>
-        </form>
+
+          <AnimatePresence mode="wait">
+            {step === 1 && (
+              <motion.div key="step1" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                <h1 className="text-5xl font-black text-gray-900 tracking-tighter leading-none">The Wall<br/>Identity</h1>
+                <p className="text-gray-500 font-medium italic tracking-tight">Give your collection a beautiful name.</p>
+                <div className="relative">
+                   <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" />
+                   <input autoFocus className="w-full p-6 pl-14 glass-card rounded-3xl outline-none text-xl font-bold focus:bg-white transition-all shadow-xl" placeholder="e.g. Class of 2025" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                <h1 className="text-5xl font-black text-gray-900 tracking-tighter leading-none">The Occasion</h1>
+                <p className="text-gray-500 font-medium italic">What are we celebrating?</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: 'valentine', icon: Heart, label: 'Valentine', color: 'text-rose-500' },
+                    { id: 'birthday', icon: Calendar, label: 'Birthday', color: 'text-blue-500' },
+                    { id: 'graduation', icon: GraduationCap, label: 'Graduation', color: 'text-amber-500' }
+                  ].map((occ) => (
+                    <button key={occ.id} type="button" onClick={() => {setType(occ.id as WallType); if(occ.id==='valentine') setUnlockDate('2026-02-14')}} className={`p-4 rounded-3xl border-2 transition-all flex flex-col items-center gap-2 ${type === occ.id ? 'border-gray-900 bg-white shadow-xl scale-105' : 'border-transparent glass-card opacity-60'}`}>
+                      <occ.icon className={type === occ.id ? occ.color : ''} />
+                      <span className="font-bold text-xs">{occ.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Unlock Date</label>
+                  <input type="date" className="w-full p-5 glass-card rounded-3xl outline-none text-lg font-bold transition-all focus:bg-white" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />
+                </div>
+              </motion.div>
+            )}
+
+            {/* NEW STEP: Custom Prompt for Graduation */}
+            {step === 3 && type === 'graduation' && (
+              <motion.div key="step3-grad" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                <h1 className="text-5xl font-black text-gray-900 tracking-tighter leading-none">The Yearbook<br/>Prompt</h1>
+                <p className="text-gray-500 font-medium italic">Classmates will answer this question.</p>
+                <div className="relative">
+                   <MessageSquareQuote className="absolute left-5 top-6 text-amber-400" />
+                   <textarea className="w-full p-6 pl-14 h-40 glass-card rounded-3xl outline-none text-xl font-bold focus:bg-white transition-all shadow-xl resize-none" placeholder="e.g. Where do you see me in 10 years?" value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} />
+                </div>
+              </motion.div>
+            )}
+
+            {(step === 3 && type !== 'graduation' || step === 4) && (
+              <motion.div key="step-vibe" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
+                <h1 className="text-5xl font-black text-gray-900 tracking-tighter leading-none">Final Vibe</h1>
+                
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Music Vibe</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(DEFAULT_VIBES as any[]).map((vibe) => (
+                      <button key={vibe.url} type="button" onClick={() => { setMusicUrl(vibe.url); setIsPreviewing(true); }} className={`p-4 rounded-2xl border-2 text-[10px] font-black uppercase transition-all ${musicUrl === vibe.url ? 'border-rose-500 bg-white shadow-md' : 'glass-card opacity-60'}`}>{vibe.label}</button>
+                    ))}
+                  </div>
+                  <input placeholder="Or paste YouTube link..." className="w-full p-4 glass-card rounded-2xl outline-none text-xs font-bold transition-all focus:bg-white" value={musicUrl} onChange={(e) => { setMusicUrl(e.target.value); if(getID(e.target.value)) setIsPreviewing(true); }} />
+                </div>
+
+                <div className="space-y-3">
+                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Color Palette</label>
+                   <div className="grid grid-cols-4 gap-2">
+                    {(Object.keys(THEMES) as WallTheme[]).map((t) => (
+                      <button key={t} type="button" onClick={() => setTheme(t)} className={`h-12 rounded-xl border-4 transition-all bg-linear-to-br ${theme === t ? 'border-gray-900 scale-110 shadow-lg' : 'border-white/50 shadow-inner'} ${THEMES[t].gradient}`} />
+                    ))}
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stepper Navigation */}
+          <div className="mt-12 flex items-center justify-between">
+            {step > 1 ? (
+              <button onClick={() => setStep(step - 1)} className="p-5 glass-card rounded-full text-gray-400 hover:text-gray-900 active:scale-90"><ChevronLeft /></button>
+            ) : <div />}
+            
+            {((type === 'graduation' && step < 4) || (type !== 'graduation' && step < 3)) ? (
+              <button disabled={!name} onClick={() => setStep(step + 1)} className="px-12 py-5 bg-gray-900 text-white rounded-full font-black text-lg flex items-center gap-2 shadow-xl disabled:opacity-30">Next <ChevronRight size={20} /></button>
+            ) : (
+              <button onClick={handleCreate} disabled={loading} className={`px-12 py-5 text-white rounded-full font-black text-lg shadow-xl ${type==='graduation' ? 'bg-amber-500' : 'bg-rose-500'}`}>
+                {loading ? <Loader2 className="animate-spin" /> : 'Launch Wall 🎓'}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Hidden Preview Player Overlay */}
-      {isPreviewing && getID(musicUrl) && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-6 py-4 rounded-full shadow-2xl border border-rose-100 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-10">
-          <div className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse" />
-          <span className="text-xs font-black text-gray-600 uppercase tracking-widest">Vibe Preview</span>
-          <button onClick={() => setIsPreviewing(false)} className="text-[9px] font-black bg-gray-100 px-2 py-1 rounded-md hover:bg-gray-200 transition-colors uppercase tracking-tighter">Stop</button>
-          {/* FIXED: The iframe source below was missing the actual URL path */}
-          <iframe className="hidden" src={`https://www.youtube.com/embed/${getID(musicUrl)}?autoplay=1`} allow="autoplay" />
+      {/* --- RIGHT SIDE: LIVE PREVIEW --- */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white/10 backdrop-blur-md items-center justify-center p-12 border-l border-white/30 relative">
+        <div className="w-full max-w-sm aspect-9/16 glass-card rounded-[48px] shadow-2xl relative overflow-hidden flex flex-col p-8 scale-90">
+           <div className={`absolute inset-0 bg-linear-to-br opacity-40 ${THEMES[theme].gradient}`} />
+           <FloatingHearts color={THEMES[theme].heartColor} />
+           
+           <div className="relative z-10 text-center mt-10">
+              <div className="w-16 h-16 bg-white/80 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-white/50 text-gray-800">
+                 {type === 'graduation' ? <GraduationCap size={32} /> : <Heart className="text-rose-500 fill-rose-500" size={32} />}
+              </div>
+              <h3 className="text-2xl font-black text-gray-800 tracking-tighter">{name || "Your Wall"}</h3>
+              <p className="text-[10px] font-black uppercase opacity-40 mt-1 tracking-widest leading-loose">Unlocks {new Date(unlockDate).toLocaleDateString()}</p>
+              
+              {type === 'graduation' && customPrompt && (
+                <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-white/50 text-xs italic font-medium text-gray-600">
+                  "{customPrompt}"
+                </div>
+              )}
+           </div>
+
+           <div className="mt-8 grid grid-cols-2 gap-3 opacity-20 flex-1 content-start">
+              {[1,2,3,4,5,6].map(i => <div key={i} className="aspect-4/3 bg-gray-400/20 rounded-2xl border border-white/50 shadow-inner" />)}
+           </div>
         </div>
+      </div>
+
+      {/* Hidden Preview Player */}
+      {isPreviewing && getID(musicUrl) && (
+        <iframe className="hidden" src={`https://www.youtube.com/embed/${getID(musicUrl)}?autoplay=1`} allow="autoplay" />
       )}
     </main>
   );

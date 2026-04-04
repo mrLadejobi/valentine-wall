@@ -70,7 +70,29 @@ export const THEMES: Record<WallTheme, ThemeConfig> = {
     envelope: 'bg-yellow-200 text-amber-700',
     stampColor: 'text-yellow-600',
     heartColor: 'text-yelllow-300'
+  },
+  
+  'ivy-league': {
+    bg: 'bg-emerald-50',
+    gradient: 'from-emerald-50 to-teal-100',
+    text: 'text-emerald-900',
+    accent: 'bg-emerald-600 hover:bg-emerald-700',
+    card: 'bg-white/90 backdrop-blur-md',
+    envelope: 'bg-emerald-200 text-emerald-800',
+    stampColor: 'text-emerald-600',
+    heartColor: 'text-emerald-300'
+  },
+  'academic-gold': {
+    bg: 'bg-slate-900',
+    gradient: 'from-slate-900 to-slate-800',
+    text: 'text-amber-100',
+    accent: 'bg-amber-500 hover:bg-amber-600',
+    card: 'bg-slate-800/90 backdrop-blur-md border-slate-700',
+    envelope: 'bg-amber-200 text-amber-900',
+    stampColor: 'text-amber-600',
+    heartColor: 'text-amber-400/20'
   }
+
 };
 
 export const STAMPS: Record<StampType, { icon: string }> = {
@@ -82,7 +104,11 @@ export const STAMPS: Record<StampType, { icon: string }> = {
   cake: { icon: '🎂' },
   balloon: { icon: '🎈' },
   gift: { icon: '🎁' },
-  party: { icon: '🥳' }
+  party: { icon: '🥳' },
+  cap: { icon: '🎓' },
+  scroll: { icon: '📜' },
+  champagne: { icon: '🥂' },
+  medal: { icon: '🏅' }
 };
 
 export const DEFAULT_VIBES = [

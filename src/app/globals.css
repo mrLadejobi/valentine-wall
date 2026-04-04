@@ -1,18 +1,44 @@
 @import "tailwindcss";
 
+@layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 25px 50px -12px rgba(244, 63, 94, 0.15);
+  }
 
-
-@keyframes float {
-  0% { transform: translateY(0) scale(0.5); opacity: 0; }
-  10% { opacity: 0.5; }
-  90% { opacity: 0.5; }
-  100% { transform: translateY(-110vh) scale(1); opacity: 0; }
+  /* Cinematic Mesh Background */
+  .bg-mesh {
+    background-color: #ffffff;
+    background-image: 
+      radial-gradient(at 10% 10%, #ffcbd1 0px, transparent 50%),
+      radial-gradient(at 90% 10%, #dbeafe 0px, transparent 50%),
+      radial-gradient(at 50% 90%, #fdf2f8 0px, transparent 50%);
+    filter: blur(80px);
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    animation: rotate-bg 30s linear infinite;
+  }
 }
 
-.animate-float {
-  animation: float linear infinite;
+@keyframes rotate-bg {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
-.perspective-1000 {
-  perspective: 1000px;
+/* Add a premium "noise" texture to the whole app */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 999;
 }

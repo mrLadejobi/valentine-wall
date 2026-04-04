@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react'; // Added useEffect
 import { supabase, supabaseEnvMissing } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Heart, Mail, Lock, ArrowRight, Inbox, Sparkles, AlertCircle, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import FloatingHearts from '@/components/FloatingHearts';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(false); 
   const [isReset, setIsReset] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,10 @@ export default function AuthPage() {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true); // New loading state for persistence
+  const searchParams = useSearchParams();
+  const initialMode = searchParams.get('mode');
+  const [isLogin, setIsLogin] = useState(initialMode === 'login'); 
+  
 
   const router = useRouter();
 
