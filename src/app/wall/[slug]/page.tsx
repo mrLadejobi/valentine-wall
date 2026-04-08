@@ -14,6 +14,8 @@ import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import filter from 'leo-profanity';
 
+const SHOW_ADVANCED_FEATURES = false;
+
 filter.add(['fuck', 'fucking', 'bastard', 'stupid', 'dumb', 'idiot', 'crazy', 'ode', 'oloriburuku', 'alainironu', 'pussy', 'breasts', 'bitch', 'fool', 'olosi']);
 
 export default function WallPage({ params }: { params: Promise<{ slug: string }> }) {

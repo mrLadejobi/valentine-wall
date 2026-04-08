@@ -12,6 +12,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingHearts from '@/components/FloatingHearts';
 
+const SHOW_ADVANCED_FEATURES = false;
+
 interface DashboardWall extends Wall {
   messages: Pick<Message, 'id' | 'stamp' | 'hint' | 'created_at'>[];
 }
