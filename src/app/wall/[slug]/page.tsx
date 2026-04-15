@@ -13,6 +13,8 @@ import FloatingHearts from '@/components/FloatingHearts';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import filter from 'leo-profanity';
+import { encryptMessage, decryptMessage } from '@/lib/encryption';
+import { userAgent } from 'next/server';
 
 const SHOW_ADVANCED_FEATURES = false;
 
@@ -291,18 +293,38 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
     e.preventDefault();
     if (isInappropriate) return;
     setSending(true);
+
     try {
+      // 1. Get IP Address for moderation
       const ipRes = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipRes.json();
+
+      // 2. ENCRYPT THE MESSAGE BODY (Using the Wall ID as the key)
+      const encryptedBody = encryptMessage(body, wallId);
+
+      // 3. INSERT THE ENCRYPTED DATA
       const { error } = await supabase.from('messages').insert([{
-        wall_id: wallId, body, author: author || 'Anonymous', hint, stamp, rotation: Math.random() * 10 - 5,
-        ip_address: ipData.ip, user_agent: navigator.userAgent
+        wall_id: wallId,
+        body: encryptedBody, // We send the gibberish to Supabase
+        author: author || 'Anonymous',
+        hint,
+        stamp,
+        rotation: Math.random() * 10 - 5,
+        ip_address: ipData.ip,
+        user_agent: navigator.userAgent
       }]);
+
       if (!error) {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         setIsSent(true);
-      } else { alert("Failed to send."); setSending(false); }
-    } catch (err) { setSending(false); alert("Connection error."); }
+      } else {
+        alert("Failed to send letter: " + error.message);
+        setSending(false);
+      }
+    } catch (err) {
+      setSending(false);
+      alert("Error connecting to server. Please try again.");
+    }
   };
 
   if (isSent) {
@@ -406,6 +428,10 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
 
 function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: Message; isUnlocked: boolean; onClose: () => void; theme: ThemeConfig; wall: Wall }) {
   const unlockDateString = new Date(wall.unlock_date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+   const displayBody = isUnlocked 
+    ? decryptMessage(message.body, wall.id) 
+    : '';
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={onClose}>
       <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-lg bg-white/80 backdrop-blur-2xl rounded-[48px] overflow-hidden shadow-2xl border border-white" onClick={e => e.stopPropagation()}>
@@ -418,7 +444,7 @@ function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: 
             <div className="space-y-6">
               <span className="text-rose-500 font-black text-[10px] uppercase tracking-[0.4em]">A message from {message.author}</span>
               <div className="max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
-                <p className="text-2xl md:text-3xl font-serif italic text-gray-800 leading-relaxed whitespace-pre-wrap text-left">"{message.body}"</p>
+                <p className="text-2xl md:text-3xl font-serif italic text-gray-800 leading-relaxed whitespace-pre-wrap text-left">"{displayBody}"</p>
               </div>
             </div>
           ) : (
