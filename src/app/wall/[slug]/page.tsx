@@ -289,43 +289,59 @@ function WriteView({ wallId, theme, onCancel, onSuccess }: { wallId: string; the
     setIsInappropriate(isBad);
   }, [body, hint, author]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isInappropriate) return;
-    setSending(true);
+ // Inside WriteView component -> handleSubmit function
 
-    try {
-      // 1. Get IP Address for moderation
-      const ipRes = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipRes.json();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (isInappropriate) return; // Local word filter check
+  setSending(true);
 
-      // 2. ENCRYPT THE MESSAGE BODY (Using the Wall ID as the key)
-      const encryptedBody = encryptMessage(body, wallId);
+  try {
+    // --- 1. AI CONTEXT DETECTION ---
+    const aiRes = await fetch('/api/check-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: body })
+    });
+    
+    const { isHarmful } = await aiRes.json();
 
-      // 3. INSERT THE ENCRYPTED DATA
-      const { error } = await supabase.from('messages').insert([{
-        wall_id: wallId,
-        body: encryptedBody, // We send the gibberish to Supabase
-        author: author || 'Anonymous',
-        hint,
-        stamp,
-        rotation: Math.random() * 10 - 5,
-        ip_address: ipData.ip,
-        user_agent: navigator.userAgent
-      }]);
-
-      if (!error) {
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        setIsSent(true);
-      } else {
-        alert("Failed to send letter: " + error.message);
-        setSending(false);
-      }
-    } catch (err) {
+    if (isHarmful) {
+      alert("Our safety agent detected harmful intent in your message. Please keep your letters kind! ❤️");
       setSending(false);
-      alert("Error connecting to server. Please try again.");
+      return; // STOP: Do not save to database
     }
-  };
+
+    // --- 2. GET IP FOR MODERATION ---
+    const ipRes = await fetch('https://api.ipify.org?format=json');
+    const ipData = await ipRes.json();
+
+    // --- 3. ENCRYPT & SAVE ---
+    const encryptedBody = encryptMessage(body, wallId);
+    
+    const { error } = await supabase.from('messages').insert([{
+      wall_id: wallId,
+      body: encryptedBody,
+      author: author || 'Anonymous',
+      hint,
+      stamp,
+      rotation: Math.random() * 10 - 5,
+      ip_address: ipData.ip,
+      user_agent: navigator.userAgent
+    }]);
+
+    if (!error) {
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+      setIsSent(true);
+    } else {
+      alert("Failed to send letter.");
+      setSending(false);
+    }
+  } catch (err) {
+    setSending(false);
+    alert("Connection error. Please try again.");
+  }
+};
 
   if (isSent) {
     return (
@@ -441,24 +457,39 @@ function MessageModal({ message, isUnlocked, onClose, theme, wall }: { message: 
         </div>
         <div className="p-12 text-center">
           {isUnlocked ? (
-            <div className="space-y-6">
-              <span className="text-rose-500 font-black text-[10px] uppercase tracking-[0.4em]">A message from {message.author}</span>
-              <div className="max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
-                <p className="text-2xl md:text-3xl font-serif italic text-gray-800 leading-relaxed whitespace-pre-wrap text-left">"{displayBody}"</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              <div className="space-y-2">
-                <h3 className="text-3xl font-black text-gray-900 tracking-tighter">It's Sealed Tight!</h3>
-                <p className="text-gray-500 text-sm font-medium">Unlocks on February 14, 2026 at 10:00 AM.</p>
-              </div>
-              <div className="bg-white/50 p-10 rounded-[40px] border border-white shadow-inner">
-                <p className="text-[10px] font-black text-rose-400 uppercase mb-4 text-left tracking-[0.3em]">The Sender's Hint:</p>
-                <p className="text-xl md:text-2xl font-bold text-rose-700 italic tracking-tight">"{message.hint}"</p>
-              </div>
-            </div>
-          )}
+  <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-3">
+      <span className="text-rose-500 font-black text-[10px] uppercase tracking-[0.4em] block">
+        A message from {message.author}
+      </span>
+
+      {/* --- PERSISTENT HINT BUBBLE --- */}
+      <div className="bg-rose-50/50 py-2 px-4 rounded-2xl border border-rose-100/50 w-fit mx-auto shadow-sm">
+        <p className="text-[11px] font-bold text-rose-400 italic tracking-tight">
+          Hint: "{message.hint}"
+        </p>
+      </div>
+    </div>
+
+    <div className="max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
+      <p className="text-2xl md:text-3xl font-serif italic text-gray-700 leading-relaxed whitespace-pre-wrap text-left px-2">
+        "{displayBody}"
+      </p>
+    </div>
+  </div>
+) : (
+  /* --- LOCKED VIEW --- */
+  <div className="space-y-8">
+    <div className="space-y-2">
+      <h3 className="text-3xl font-black text-gray-900 tracking-tighter">It's Sealed Tight!</h3>
+      <p className="text-gray-500 text-sm font-medium">Unlocks on February 14, 2026 at 10:00 AM.</p>
+    </div>
+    <div className="bg-white/50 p-10 rounded-[40px] border border-white shadow-inner">
+      <p className="text-[10px] font-black text-rose-400 uppercase mb-4 text-left tracking-[0.3em]">The Sender's Hint:</p>
+      <p className="text-xl md:text-2xl font-bold text-rose-700 italic tracking-tight">"{message.hint}"</p>
+    </div>
+  </div>
+)}
         </div>
         <div className="p-8 bg-gray-50/50 border-t flex justify-center">
           <button onClick={onClose} className="text-gray-400 font-black uppercase text-[10px] tracking-[0.3em] hover:text-gray-600 transition-colors">Close Envelope</button>
