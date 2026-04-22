@@ -3,40 +3,42 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    // 1. Send the text to the AI model
+    if (!apiKey) {
+      return NextResponse.json({ isHarmful: false, error: "API KEY MISSING" });
+    }
+
+    // We ask Gemini to act as a moderator
+    const prompt = `Analyze this message for harmful intent, severe bullying, or threats. 
+    If the message is harmful, reply with the word: HARMFUL. 
+    If it is kind or neutral, reply with: SAFE.
+    Message: "${text.slice(0, 2000)}"`;
+
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/unitary/toxic-bert",
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
       {
-        headers: { 
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
         method: "POST",
-        body: JSON.stringify({ inputs: text.slice(0, 1000) }), // AI limit check
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        }),
       }
     );
 
-    const result = await response.json();
-
-    // Hugging Face sometimes returns a simple error if the model is "warming up"
-    if (result.error) {
-       console.log("AI Warming up...");
-       return NextResponse.json({ isHarmful: false }); 
-    }
-
-    // 2. Parse the AI's categories
-    // Labels are: toxic, severe_toxic, obscene, threat, insult, identity_hate
-    const labels = result[0] || [];
+    const data = await response.json();
     
-    // We flag the message if toxicity, insults, or threats are above 80%
-    const isHarmful = labels.some((item: any) => 
-      ['toxic', 'insult', 'threat', 'identity_hate'].includes(item.label) && item.score > 0.8
-    );
+    // Extract Gemini's text response
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "SAFE";
 
-    return NextResponse.json({ isHarmful });
-  } catch (error) {
-    console.error("AI Error:", error);
-    return NextResponse.json({ isHarmful: false }); // Safe fallback
+    console.log("Gemini Analysis:", aiResponse);
+
+    return NextResponse.json({ 
+      isHarmful: aiResponse.toUpperCase().includes("HARMFUL") 
+    });
+
+  } catch (error: any) {
+    console.error("Gemini Route Error:", error.message);
+    return NextResponse.json({ isHarmful: false }); 
   }
 }
