@@ -1,12 +1,21 @@
-'use client';
-import React, { useState } from 'react';
-import { MessageSquare, X, Send, Smile, Meh, Frown, Loader2, CheckCircle2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+"use client";
+import React, { useState } from "react";
+import {
+  MessageSquare,
+  X,
+  Send,
+  Smile,
+  Meh,
+  Frown,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export default function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [rating, setRating] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -17,23 +26,25 @@ export default function FeedbackWidget() {
 
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const ipRes = await fetch('https://api.ipify.org?format=json');
+      const ipRes = await fetch("https://api.ipify.org?format=json");
       const ipData = await ipRes.json();
 
-      const { error } = await supabase.from('feedback').insert([{
-        content,
-        rating,
-        user_id: userData.user?.id || null,
-        page_url: window.location.pathname,
-        ip_address: ipData.ip
-      }]);
+      const { error } = await supabase.from("feedback").insert([
+        {
+          content,
+          rating,
+          user_id: userData.user?.id || null,
+          page_url: window.location.pathname,
+          ip_address: ipData.ip,
+        },
+      ]);
 
       if (!error) {
         setSent(true);
         setTimeout(() => {
           setSent(false);
           setIsOpen(false);
-          setContent('');
+          setContent("");
           setRating(null);
         }, 3000);
       }
@@ -56,28 +67,37 @@ export default function FeedbackWidget() {
           >
             {sent ? (
               <div className="p-8 text-center animate-in zoom-in-95">
-                <CheckCircle2 size={48} className="text-green-500 mx-auto mb-4" />
+                <CheckCircle2
+                  size={48}
+                  className="text-green-500 mx-auto mb-4"
+                />
                 <p className="font-bold text-gray-900">Thank you!</p>
-                <p className="text-xs text-gray-500 mt-1">Your feedback helps us grow.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Your feedback helps us grow.
+                </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="p-5">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-sm uppercase tracking-widest text-rose-500">Send Feedback</h3>
-                  <button type="button" onClick={() => setIsOpen(false)}><X size={18} className="text-gray-400" /></button>
+                  <h3 className="font-black text-sm uppercase tracking-widest text-rose-500">
+                    Send Feedback
+                  </h3>
+                  <button type="button" onClick={() => setIsOpen(false)}>
+                    <X size={18} className="text-gray-400" />
+                  </button>
                 </div>
 
                 <div className="flex justify-around mb-4 bg-rose-50 p-2 rounded-2xl">
                   {[
-                    { id: 'sad', icon: Frown },
-                    { id: 'neutral', icon: Meh },
-                    { id: 'happy', icon: Smile },
+                    { id: "sad", icon: Frown },
+                    { id: "neutral", icon: Meh },
+                    { id: "happy", icon: Smile },
                   ].map((item) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setRating(item.id)}
-                      className={`p-2 rounded-xl transition-all ${rating === item.id ? 'bg-white shadow-sm text-rose-500 scale-110' : 'text-gray-400'}`}
+                      className={`p-2 rounded-xl transition-all ${rating === item.id ? "bg-white shadow-sm text-rose-500 scale-110" : "text-gray-400"}`}
                     >
                       <item.icon size={24} />
                     </button>
@@ -98,7 +118,13 @@ export default function FeedbackWidget() {
                   disabled={loading}
                   className="w-full py-3 bg-rose-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
-                  {loading ? <Loader2 className="animate-spin" size={18} /> : <><Send size={16} /> Send Note</>}
+                  {loading ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <>
+                      <Send size={16} /> Send Note
+                    </>
+                  )}
                 </motion.button>
               </form>
             )}
