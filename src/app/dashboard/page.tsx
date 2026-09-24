@@ -23,9 +23,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FloatingHearts from "@/components/FloatingHearts";
-import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
-import { MemoryBookExporter } from "@/components/MemoryBookExporter";
-import { AudioPlayer } from "@/components/AudioPlayer";
 
 const SHOW_ADVANCED_FEATURES = false;
 
@@ -172,18 +169,23 @@ export default function Dashboard() {
             </Link>
           </motion.div>
 
-          {/* New Feature Widgets Section */}
+          {/* Stats Tile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6"
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-4 glass-card rounded-[40px] p-10 flex flex-col items-center justify-center text-center bg-blue-50/20"
           >
-            <AnalyticsDashboard totalNotes={totalNotes} totalStamps={walls.length * 2} totalPolaroids={walls.length} />
-            <MemoryBookExporter wallTitle="Celebration Wall Hub" notes={[]} />
+            <div className="w-20 h-20 bg-white/50 rounded-full flex items-center justify-center mb-4 text-blue-500">
+              <MessageCircle size={32} />
+            </div>
+            <span className="text-6xl font-black text-gray-900 tracking-tighter">
+              {totalNotes}
+            </span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">
+              Notes Collected
+            </span>
           </motion.div>
-
-          <AudioPlayer />
 
           {/* Existing Walls */}
           <AnimatePresence>

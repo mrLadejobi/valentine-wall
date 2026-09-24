@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { noteId, emoji } = body;
-    if (!noteId || !emoji) {
-      return NextResponse.json({ error: 'Missing noteId or emoji' }, { status: 400 });
-    }
-    return NextResponse.json({ success: true, noteId, emoji });
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    const body = await request.json();
+    return NextResponse.json({ success: true, message: 'Reaction recorded', data: body });
+  } catch {
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 }
